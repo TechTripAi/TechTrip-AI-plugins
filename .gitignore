@@ -1,38 +1,44 @@
-# macOS
+# techtrip-claude-plugins is a Claude Code plugin marketplace (skills, docs, one stdlib Python script).
+
+# System
 .DS_Store
-.AppleDouble
-._*
-.Spotlight-V100
-.Trashes
+Thumbs.db
 
-# Python (bundled scripts run with the stdlib; no venv is expected, but ignore one if created)
-__pycache__/
-*.py[cod]
-.venv/
-venv/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-
-# Editors and IDEs
+# IDE
 .idea/
-*.iml
 .vscode/
-*.swp
-*.swo
-*~
 
-# Claude Code local state (per-user settings, never shared)
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Node
+node_modules/
+
+# Claude Code local state (per-user, never shared)
 .claude/settings.local.json
-.claude/*.local.json
 
-# skill-creator eval runs and other scratch output
+# skill-creator eval runs (evals.json is tracked; run output is not)
 plugins/*/skills/*/evals/runs/
-plugins/*/skills/*/evals/*.log
-*.tmp
-*.log
 
-# Local workspaces and secrets
-*-workspace/
+# Local secrets / env
 .env
-.env.*
+.env.local
+
+# Private keys and credentials (defense-in-depth; never commit these)
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+id_rsa*
+id_ed25519*
+id_ecdsa*
+id_dsa*
+credentials*
+secrets.y*ml
+auth.json
+
+# Local scratch workspaces
+*-workspace/
