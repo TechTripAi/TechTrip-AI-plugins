@@ -37,7 +37,7 @@ place and says what to install if not. It never installs anything for you.
 | [techtrip-secondbrain](https://github.com/TechTripAi/techtrip-secondbrain) | One-command bootstrapper for a generic LLM Wiki second brain on a fresh Mac: Obsidian, the claude-obsidian companion, a clean vault, the Obsidian MCP server, source-fetch skills (YouTube, X, voice, code, NotebookLM), git sync and backup. Harness-agnostic skills with Claude Code, Cursor and Copilot templates. Own repository. | `/techtrip-secondbrain:brain-dump` |
 | [claude-obsidian](https://github.com/TechTripAi/claude-obsidian) | TechTrip AI's maintained fork of [AgriciDaniel's claude-obsidian](https://github.com/AgriciDaniel/claude-obsidian) (MIT), a self-organizing AI second brain for Obsidian + Claude Code. Maintained independently with changes that are not merged upstream; original credit and license retained. Installed for you by techtrip-secondbrain, or on its own from here. Own repository. | its README |
 
-Install any of them the same way:
+Install any of them the same way. This catalog is the only marketplace for all three; the products' repositories no longer carry marketplaces of their own.
 
 ```
 /plugin install techtrip-secondbrain@TechTrip-AI-plugins

@@ -13,9 +13,9 @@ catalog for everything the user releases. It lists two kinds of entries:
 - **Products in their own repositories**, `{ "source": "github", "repo": "TechTripAi/<name>" }`
   entries. Currently `techtrip-secondbrain` (the user's) and `claude-obsidian` (the user's
   permanent maintained fork of AgriciDaniel's MIT project; upstream does not take the
-  changes, so the fork is a product, not a patch set). They keep their own rules and their
-  own `marketplace.json` for existing installs; those standalone marketplaces are to be
-  retired later, not now.
+  changes, so the fork is a product, not a patch set). They keep their own rules. Their
+  standalone `marketplace.json` files were retired on 2026-09-25 (nobody but the user had
+  installed from them), so this catalog is the only marketplace for all three.
 
 The rule for new work: small and Claude Code only goes under `plugins/`; anything with an
 installer, tests, harness templates, or a harness-agnostic audience (planned education and
@@ -59,9 +59,9 @@ For a hosted plugin, a version lives in three places that must agree:
 `.claude-plugin/marketplace.json`, and a new dated heading in `plugins/<name>/CHANGELOG.md`.
 Bump all three together.
 
-For a product in its own repository, the release happens there (its `plugin.json`,
-CHANGELOG, and its own `marketplace.json` while that still exists), and then the `version`
-on its entry here must be bumped to match, or `plugin update` will not see the release.
+For a product in its own repository, the release happens there (its `plugin.json` and
+CHANGELOG), and then the `version` on its entry here must be bumped to match, or
+`plugin update` will not see the release.
 
 The marketplace `metadata.version` is separate and tracks the catalog itself: bump it when
 entries are added, removed, or the catalog is renamed.
