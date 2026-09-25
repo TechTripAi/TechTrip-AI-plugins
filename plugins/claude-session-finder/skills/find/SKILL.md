@@ -1,6 +1,6 @@
 ---
 name: find
-description: Find, list, search and resume past Claude Code sessions across every project on this machine, with the directory, session id, last active time, the last thing the user said and Claude's last reply, and the exact command to resume. Use this whenever the user has lost, closed, crashed or forgotten a Claude Code session and wants it back ("I closed claude by mistake", "where was I", "which session was I in", "what was I working on last night"), wants to know which session a past conversation happened in ("the session where I asked about X"), wants a list or timeline of their sessions across projects, wants a session id or resume command, or asks what a previous session ended on. Also use it when the user asks how Claude Code sessions are stored, or how to search or clean up ~/.claude/projects. Prefer it over hand-rolled grep over ~/.claude, even for a single lookup. Part of the claude-session-finder plugin; the guided tour is the sibling brain-dump skill.
+description: Find, list, search and resume past Claude Code sessions across every project on this machine, with the directory, session id, last active time, the last thing the user said and Claude's last reply, and the exact command to resume. Use this whenever the user has lost, closed, crashed or forgotten a Claude Code session and wants it back ("I closed claude by mistake", "where was I", "which session was I in", "what was I working on last night"), wants to know which session a past conversation happened in ("the session where I asked about X"), wants a list or timeline of their sessions across projects, wants a session id or resume command, or asks what a previous session ended on. Also use it when the user asks how Claude Code sessions are stored, how to search or clean up ~/.claude/projects, or to check, verify or diagnose whether the session finder can run on this machine ("check the session finder", "is the finder set up", "run the doctor"). Prefer it over hand-rolled grep over ~/.claude, even for a single lookup. Part of the claude-session-finder plugin; the guided tour is the sibling brain-dump skill.
 ---
 
 # claude-session-finder: find
@@ -22,7 +22,8 @@ Run it as `python3 <skill-dir>/scripts/find_sessions.py`. If `python3` is not on
 
 The script checks its own Python version and the session store at startup and exits with a
 one-line reason. If any run fails for any reason (command not found, a version message, a
-traceback, "no session store"), run the doctor once and show the user its output:
+traceback, "no session store"), or the user asks to check, verify or diagnose the setup,
+run the doctor and show the user its output:
 
 ```bash
 python3 <skill-dir>/scripts/find_sessions.py --doctor

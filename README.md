@@ -22,6 +22,9 @@ Inside Claude Code:
 
 The first line registers the marketplace on your machine. The second installs one
 plugin at user scope, so it is available in every project. The third starts its tour.
+Then, in a new session, ask Claude to "check that the session finder can run on this
+machine": the plugin's doctor confirms Python, Claude Code and the session store are in
+place and says what to install if not. It never installs anything for you.
 
 ## Plugins
 
@@ -43,6 +46,8 @@ version.
   with macOS. No package installs to use a plugin.
 - **Read-only unless the README says otherwise.** A plugin that changes files, settings
   or sessions says so up front and asks before doing it.
+- **Advise, never install.** A plugin checks for what it needs and tells you what to
+  install for your OS. It does not run installers or package managers on your behalf.
 - **Nothing leaves the machine.** Plugins here read local files. Any exception is
   documented in that plugin's README.
 
