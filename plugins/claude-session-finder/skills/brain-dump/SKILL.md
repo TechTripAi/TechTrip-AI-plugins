@@ -79,12 +79,19 @@ I closed claude by mistake, where was I and how do I get back in?
 ```
 
 **Expect:** the best candidate first, with why it is the best (most recent, or the only one
-in that directory), then one or two alternates, each with a line like:
+in that directory), then one or two alternates. The resume command sits alone in a code
+block so it copies cleanly. When the session is the newest in its directory there is no
+id to copy at all:
+```
+cd <project-dir> && claude --continue
+```
+Otherwise it is the exact form:
 ```
 cd <project-dir> && claude --resume <session-id>
 ```
 Copy that line into a terminal. You will land in the conversation exactly where the last
-completed turn ended.
+completed turn ended. If the id is awkward to select, ask Claude to "copy the resume
+command for that one" and it lands on your clipboard.
 
 ---
 
@@ -122,9 +129,10 @@ list my sessions in acctz-app from the last week, with the last thing I said in 
 show every claude session I had this month across all projects, newest first
 ```
 
-**Expect:** a table: last active, directory, last thing you said, status; then ids and
-resume commands. Sessions that started before the window but were active inside it are
-included, and Claude says so.
+**Expect:** a numbered shortlist: last active, directory, last thing you said, status. No
+ids yet; pick one and Claude gives its id and resume command in a code block. (Ids never
+go in a table, because the terminal clips table cells.) Sessions that started before the
+window but were active inside it are included, and Claude says so.
 
 ---
 

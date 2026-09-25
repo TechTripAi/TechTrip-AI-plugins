@@ -613,7 +613,12 @@ def main() -> None:
     sessions = collect_sessions(cfg, deep=args.deep)
     if args.copy:
         s = find_one(sessions, args.copy)
+        if not s["has_transcript"]:
+            sys.exit(s["resume_command"])
         cmd = s["resume_command"]
+        if s["status"] == "running":
+            cmd = f"{s['resume_by_id']} --fork-session"
+            print(f"note: that session is still running as pid {s['pid']}; copying the fork command instead")
         tool = copy_to_clipboard(cmd)
         if tool:
             print(f"copied to clipboard ({tool}):\n{cmd}")

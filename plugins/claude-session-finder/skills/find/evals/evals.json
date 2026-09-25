@@ -16,7 +16,19 @@
     {
       "id": 3,
       "prompt": "show me all the claude code sessions I've had across all my projects in the last 2 weeks, when each was last active, and the last thing I said in each",
-      "expected_output": "A table or list covering every project directory with sessions in the window, each with last active time and the last meaningful user prompt (not 'exit'), sorted newest first.",
+      "expected_output": "A numbered shortlist covering every project directory with sessions in the window, each with last active time and the last meaningful user prompt (not 'exit'), sorted newest first. No session ids or resume commands inside a markdown table; if ids are shown they are on their own lines or in code blocks.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "I closed the terminal on my techtrip-skills session by accident. Give me the command to get back into it.",
+      "expected_output": "Identifies the newest session in the techtrip-skills directory and gives a single fenced code block containing 'cd <dir> && claude --continue' (since it is the newest there), mentions 'claude --resume <id>' as the exact alternative, and does not put the id or command in a table.",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "which of my sessions from this week were in workspace-ai? I'll pick one and then I want the resume command on my clipboard",
+      "expected_output": "Phase one: a numbered shortlist (time, directory, quoted last prompt) without ids, offered through the AskUserQuestion picker or a prose question. After the pick: the session id on its own line, the resume command in a code block, and the script run with --copy <id-prefix> so the command is on the clipboard, reporting which tool copied it.",
       "files": []
     }
   ]
