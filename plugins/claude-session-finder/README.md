@@ -22,6 +22,34 @@ running in another terminal are flagged so you do not fork them by accident.
 /plugin install claude-session-finder@techtrip-claude-plugins
 ```
 
+## First run: the tour and the doctor
+
+Two things to do once, in a new Claude Code session after installing.
+
+**1. Take the tour.** A menu-driven guide that explains how sessions are stored and hands
+you the exact prompts to type. It never runs anything for you, so it is safe to explore.
+
+```
+/claude-session-finder:brain-dump
+```
+
+**2. Check the machine.** The doctor confirms Python, Claude Code, the session store and
+the clipboard tool are in place, and if anything is missing it says what to install for
+your OS. It installs nothing, and neither does the skill; you do the installing.
+
+```
+check that the session finder can run on this machine
+```
+
+or from a terminal:
+
+```
+python3 <plugin>/skills/find/scripts/find_sessions.py --doctor
+```
+
+`<plugin>` is the install path shown under the plugin's details in `/plugin`. On Windows
+use `py -3` instead of `python3`.
+
 ## Use
 
 | You want | Do |
@@ -31,7 +59,7 @@ running in another terminal are flagged so you do not fork them by accident.
 | Just ask | "where was I yesterday in the acctz-app repo?" triggers the skill on its own |
 | The resume command on your clipboard | "copy the resume command for that one", or `--copy <id-prefix>` from a terminal |
 | Run the script yourself | `python3 <plugin>/skills/find/scripts/find_sessions.py --help` |
-| Check the machine can run it | `python3 <plugin>/skills/find/scripts/find_sessions.py --doctor` |
+| Check the machine can run it | "check that the session finder can run here", or `--doctor` from a terminal (see First run) |
 
 ## Skills
 
