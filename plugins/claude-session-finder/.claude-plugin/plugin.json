@@ -1,0 +1,14 @@
+{
+  "name": "claude-session-finder",
+  "version": "0.2.0",
+  "description": "Find, search and resume past Claude Code sessions across every project on this machine: directory, session id, last active, the last thing you said, and the exact resume command. Includes a brain-dump tour that teaches you how to use it.",
+  "author": {
+    "name": "Terry Trippany (Try AI Solutions)",
+    "email": "terry.trippany@techtrip.ai",
+    "url": "https://github.com/TechTripAi"
+  },
+  "homepage": "https://github.com/TechTripAi/techtrip-claude-plugins/tree/main/plugins/claude-session-finder",
+  "repository": "https://github.com/TechTripAi/techtrip-claude-plugins",
+  "license": "FSL-1.1-MIT",
+  "keywords": ["claude-code", "sessions", "resume", "transcripts", "productivity"]
+}
