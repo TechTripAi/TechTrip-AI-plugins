@@ -4,12 +4,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-A Claude Code plugin marketplace (`.claude-plugin/marketplace.json`) holding one or more
-plugins under `plugins/<name>/`. Each plugin is self-contained: its own `plugin.json`,
-README, CHANGELOG, version, and `skills/<skill>/SKILL.md` files invoked as
-`/<plugin>:<skill>`. There is no build, no package manager, no test runner and no linter.
-Bundled scripts must run on the Python 3.9+ / shell that ships with macOS with the
-standard library only; do not add dependencies.
+TechTrip AI's one Claude Code plugin marketplace (`.claude-plugin/marketplace.json`), the
+catalog for everything the user releases. It lists two kinds of entries:
+
+- **Hosted plugins** under `plugins/<name>/`, relative sources. Small, Claude Code specific,
+  and bound by the conventions below. Each is self-contained: its own `plugin.json`, README,
+  CHANGELOG, version, and `skills/<skill>/SKILL.md` files invoked as `/<plugin>:<skill>`.
+- **Products in their own repositories**, `{ "source": "github", "repo": "TechTripAi/<name>" }`
+  entries. Currently `techtrip-secondbrain` (the user's) and `claude-obsidian` (the user's
+  permanent maintained fork of AgriciDaniel's MIT project; upstream does not take the
+  changes, so the fork is a product, not a patch set). They keep their own rules and their
+  own `marketplace.json` for existing installs; those standalone marketplaces are to be
+  retired later, not now.
+
+The rule for new work: small and Claude Code only goes under `plugins/`; anything with an
+installer, tests, harness templates, or a harness-agnostic audience (planned education and
+business packs) gets its own repository and a github entry here.
+
+There is no build, no package manager, no test runner and no linter. Bundled scripts must
+run on the Python 3.9+ / shell that ships with macOS with the standard library only; do not
+add dependencies. Validate the catalog with `claude plugin validate .`.
 
 ## Commands
 
@@ -40,15 +54,22 @@ without the skill, compare, adjust the SKILL.md.
 
 ## Releasing a plugin
 
-A version lives in three places that must agree: `plugins/<name>/.claude-plugin/plugin.json`,
-the matching entry in `.claude-plugin/marketplace.json`, and a new dated heading in
-`plugins/<name>/CHANGELOG.md`. Bump all three together. The marketplace `metadata.version`
-is separate and tracks the catalog itself.
+For a hosted plugin, a version lives in three places that must agree:
+`plugins/<name>/.claude-plugin/plugin.json`, the matching entry in
+`.claude-plugin/marketplace.json`, and a new dated heading in `plugins/<name>/CHANGELOG.md`.
+Bump all three together.
 
-## Conventions every plugin must follow
+For a product in its own repository, the release happens there (its `plugin.json`,
+CHANGELOG, and its own `marketplace.json` while that still exists), and then the `version`
+on its entry here must be bumped to match, or `plugin update` will not see the release.
 
-These are promised in the top-level README, so a new plugin that breaks one needs the
-README changed too.
+The marketplace `metadata.version` is separate and tracks the catalog itself: bump it when
+entries are added, removed, or the catalog is renamed.
+
+## Conventions every hosted plugin must follow
+
+These apply to plugins under `plugins/`, not to github-sourced products. They are promised
+in the top-level README, so a new hosted plugin that breaks one needs the README changed too.
 
 - **Two skills per plugin.** A `brain-dump` skill (teacher: menu-driven, re-runnable,
   `allowed-tools: Read`, never runs the worker or touches files on the user's behalf) and

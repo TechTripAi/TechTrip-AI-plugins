@@ -6,8 +6,8 @@
     "url": "https://github.com/TechTripAi"
   },
   "metadata": {
-    "description": "TechTrip's Claude Code plugins: small, focused tools for working with Claude Code itself. Each plugin ships a brain-dump skill that teaches you how to use it.",
-    "version": "0.2.0"
+    "description": "Everything TechTrip AI releases for Claude Code and other agent harnesses, in one catalog: small Claude Code tools hosted here, plus larger products (second brain, Obsidian knowledge companion) that live in their own repositories. Add the marketplace once and install what you need.",
+    "version": "0.3.0"
   },
   "plugins": [
     {
@@ -25,6 +25,37 @@
       "repository": "https://github.com/TechTripAi/TechTrip-AI-plugins",
       "license": "FSL-1.1-MIT",
       "keywords": ["claude-code", "sessions", "resume", "transcripts", "productivity"]
+    },
+    {
+      "name": "techtrip-secondbrain",
+      "source": { "source": "github", "repo": "TechTripAi/techtrip-secondbrain" },
+      "description": "One-command bootstrapper for a generic LLM Wiki second brain on a fresh Mac: installs Obsidian and its community plugins, pulls the TechTrip-maintained claude-obsidian fork, scaffolds a clean vault, wires the Obsidian MCP server, ships the yt-fetch, x-fetch, voice-fetch, code-fetch and notebooklm-ingest source skills plus the new-idea origination scaffolder, and sets up git sync and backup. Harness-agnostic skills with Claude Code, Cursor and Copilot harness templates. Interactive and idempotent. Lives in its own repository; this entry tracks its releases.",
+      "version": "0.2.20",
+      "category": "knowledge",
+      "author": {
+        "name": "Terry Trippany (Try AI Solutions)",
+        "email": "terry.trippany@techtrip.ai",
+        "url": "https://github.com/TechTripAi"
+      },
+      "homepage": "https://github.com/TechTripAi/techtrip-secondbrain",
+      "repository": "https://github.com/TechTripAi/techtrip-secondbrain",
+      "license": "FSL-1.1-MIT",
+      "keywords": ["obsidian", "second-brain", "llm-wiki", "bootstrap", "installer", "knowledge-base", "mcp"]
+    },
+    {
+      "name": "claude-obsidian",
+      "source": { "source": "github", "repo": "TechTripAi/claude-obsidian" },
+      "description": "TechTrip AI's maintained fork of AgriciDaniel's MIT-licensed claude-obsidian, a self-organizing AI second brain for Obsidian + Claude Code built on Karpathy's LLM Wiki pattern. The fork is maintained independently and carries fixes and changes that are not merged upstream; the original author's credit and MIT license are retained. Installed automatically by techtrip-secondbrain; install from here to use it on its own.",
+      "version": "1.9.6",
+      "category": "knowledge",
+      "author": {
+        "name": "AgriciDaniel (original); maintained by Terry Trippany, TechTrip AI",
+        "url": "https://github.com/AgriciDaniel/claude-obsidian"
+      },
+      "homepage": "https://github.com/TechTripAi/claude-obsidian",
+      "repository": "https://github.com/TechTripAi/claude-obsidian",
+      "license": "MIT",
+      "keywords": ["obsidian", "second-brain", "llm-wiki", "knowledge-base", "fork"]
     }
   ]
 }
