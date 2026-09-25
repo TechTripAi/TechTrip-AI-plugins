@@ -20,7 +20,7 @@ claude --plugin-dir ./plugins/claude-session-finder
 
 # Refresh the installed (user-scope) copy after a version bump; a new session picks it up.
 # With an unchanged version it reports "already at the latest version" and copies nothing.
-claude plugin update claude-session-finder@techtrip-claude-plugins
+claude plugin update claude-session-finder@TechTrip-AI-plugins
 
 # Run a bundled script directly (the only executable code in the repo)
 python3 plugins/claude-session-finder/skills/find/scripts/find_sessions.py --help

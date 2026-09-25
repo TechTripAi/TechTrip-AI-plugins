@@ -1,13 +1,13 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "techtrip-claude-plugins",
+  "name": "TechTrip-AI-plugins",
   "owner": {
     "name": "TechTripAi",
     "url": "https://github.com/TechTripAi"
   },
   "metadata": {
     "description": "TechTrip's Claude Code plugins: small, focused tools for working with Claude Code itself. Each plugin ships a brain-dump skill that teaches you how to use it.",
-    "version": "0.1.0"
+    "version": "0.2.0"
   },
   "plugins": [
     {
@@ -21,8 +21,8 @@
         "email": "terry.trippany@techtrip.ai",
         "url": "https://github.com/TechTripAi"
       },
-      "homepage": "https://github.com/TechTripAi/techtrip-claude-plugins/tree/main/plugins/claude-session-finder",
-      "repository": "https://github.com/TechTripAi/techtrip-claude-plugins",
+      "homepage": "https://github.com/TechTripAi/TechTrip-AI-plugins/tree/main/plugins/claude-session-finder",
+      "repository": "https://github.com/TechTripAi/TechTrip-AI-plugins",
       "license": "FSL-1.1-MIT",
       "keywords": ["claude-code", "sessions", "resume", "transcripts", "productivity"]
     }
