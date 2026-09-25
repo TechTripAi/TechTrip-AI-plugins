@@ -1,7 +1,7 @@
-# techtrip-claude-plugins
+# TechTrip-AI-plugins
 
 <p align="center">
-  <img src="img/FellowshipOfTheAgents.png" alt="techtrip-claude-plugins: TechTrip's Claude Code plugins" width="100%" />
+  <img src="img/FellowshipOfTheAgents.png" alt="TechTrip-AI-plugins: TechTrip's Claude Code plugins" width="100%" />
 </p>
 
 **TechTrip's Claude Code plugins.** Small, focused tools for working with Claude Code
@@ -15,8 +15,8 @@ it and hands you the exact prompts to type. The tour is always one command away,
 Inside Claude Code:
 
 ```
-/plugin marketplace add TechTripAi/techtrip-claude-plugins
-/plugin install claude-session-finder@techtrip-claude-plugins
+/plugin marketplace add TechTripAi/TechTrip-AI-plugins
+/plugin install claude-session-finder@TechTrip-AI-plugins
 /claude-session-finder:brain-dump
 ```
 
@@ -88,7 +88,7 @@ skill keeps its test prompts in `evals/evals.json` so the loop can be rerun.
 ## Updating
 
 ```
-/plugin marketplace update techtrip-claude-plugins
+/plugin marketplace update TechTrip-AI-plugins
 ```
 
 then reinstall or `/plugin update` the plugin you use. Auto-update is off for third-party

@@ -18,8 +18,8 @@ running in another terminal are flagged so you do not fork them by accident.
 ## Install
 
 ```
-/plugin marketplace add TechTripAi/techtrip-claude-plugins
-/plugin install claude-session-finder@techtrip-claude-plugins
+/plugin marketplace add TechTripAi/TechTrip-AI-plugins
+/plugin install claude-session-finder@TechTrip-AI-plugins
 ```
 
 ## First run: the tour and the doctor
