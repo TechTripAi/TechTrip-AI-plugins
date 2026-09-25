@@ -1,0 +1,23 @@
+{
+  "skill_name": "find",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I closed claude in a directory that had a running session by mistake, how can I find where I was and what session I was in?",
+      "expected_output": "Identifies the most recently closed session(s) other than the current one, giving directory, session id, last active time, last thing the user said, and a resume command.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "which claude session was I in when I asked about scott's email? I think it was a week or two ago. give me the command to get back into it",
+      "expected_output": "Finds the single pipeline-planning session containing the prompt 'Do you have scotts email?', reports its directory, id and last active time, quotes the prompt, and gives a resume command.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "show me all the claude code sessions I've had across all my projects in the last 2 weeks, when each was last active, and the last thing I said in each",
+      "expected_output": "A table or list covering every project directory with sessions in the window, each with last active time and the last meaningful user prompt (not 'exit'), sorted newest first.",
+      "files": []
+    }
+  ]
+}
