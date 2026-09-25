@@ -14,7 +14,7 @@
       "name": "claude-session-finder",
       "source": "./plugins/claude-session-finder",
       "description": "Find, search and resume past Claude Code sessions across every project on this machine: directory, session id, last active, the last thing you said, and the exact resume command. Includes a brain-dump tour.",
-      "version": "0.2.1",
+      "version": "0.2.2",
       "category": "productivity",
       "author": {
         "name": "Terry Trippany (Try AI Solutions)",

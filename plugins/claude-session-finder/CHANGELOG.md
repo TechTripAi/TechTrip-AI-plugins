@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.2 - 2026-09-25
+
+- README leads with a "First run" section: the tour, then the doctor, with the Claude
+  prompt and the terminal form.
+- `find` also triggers on "check / verify / run the doctor for the session finder".
+
 ## 0.2.1 - 2026-09-25
 
 - Startup guard: the script exits with a one-line message when run under Python older than
