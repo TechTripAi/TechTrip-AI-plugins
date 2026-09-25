@@ -14,8 +14,13 @@ standard library only; do not add dependencies.
 ## Commands
 
 ```bash
-# Load a plugin into a session without installing it, then /reload-plugins after edits
+# Load a plugin into a session without installing it, then /reload-plugins after edits.
+# Use this for iteration: the installed copy is a version-keyed cache and does not see edits.
 claude --plugin-dir ./plugins/claude-session-finder
+
+# Refresh the installed (user-scope) copy after a version bump; a new session picks it up.
+# With an unchanged version it reports "already at the latest version" and copies nothing.
+claude plugin update claude-session-finder@techtrip-claude-plugins
 
 # Run a bundled script directly (the only executable code in the repo)
 python3 plugins/claude-session-finder/skills/find/scripts/find_sessions.py --help
