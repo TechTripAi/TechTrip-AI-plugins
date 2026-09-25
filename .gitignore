@@ -1,4 +1,38 @@
-__pycache__/
-*.pyc
+# macOS
 .DS_Store
+.AppleDouble
+._*
+.Spotlight-V100
+.Trashes
+
+# Python (bundled scripts run with the stdlib; no venv is expected, but ignore one if created)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Editors and IDEs
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
+
+# Claude Code local state (per-user settings, never shared)
+.claude/settings.local.json
+.claude/*.local.json
+
+# skill-creator eval runs and other scratch output
+plugins/*/skills/*/evals/runs/
+plugins/*/skills/*/evals/*.log
+*.tmp
+*.log
+
+# Local workspaces and secrets
 *-workspace/
+.env
+.env.*
