@@ -61,6 +61,8 @@ README changed too.
 - **Nothing copyable in a markdown table.** The terminal renderer truncates table cells, so
   session ids, paths and commands go in fenced code blocks on their own line. Skills that
   present results shortlist first, then show the chosen item as a block.
+- **Advise, never install.** Preflight (`--doctor`) and the skill text tell the user what to
+  install per OS; no skill or script runs installers or package managers.
 - **Cross-platform means POSIX plus Windows branches.** `os.kill(pid, 0)` terminates the
   target on Windows; use `pid_alive()`. Quote shell commands through `shell_quote()` /
   `cd_then()`, which emit PowerShell syntax when `os.name == "nt"`. Windows is untested
@@ -88,7 +90,8 @@ filter → output:
   than fatal. `--deep` is the only thing that reads assistant blocks, which is why it is slow.
 - **`collect_sessions` → `apply_filters` → `print_list` / `print_show` / `to_json`.**
   Add a new flag in `main()`, filter it in `apply_filters`, and make sure `to_json` still
-  carries the field. `--show` and `--copy` short-circuit before filtering via `find_one`.
+  carries the field. `--show` and `--copy` short-circuit before filtering via `find_one`;
+  `--doctor` short-circuits before the session store is even required.
 - **Resume command selection** happens at the end of `collect_sessions`: the newest
   transcript per directory (by file mtime, which is what `claude --continue` keys on) gets
   the `--continue` form as `resume_command` and the id form as `resume_alt`; every session

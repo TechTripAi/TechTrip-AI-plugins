@@ -31,6 +31,7 @@ running in another terminal are flagged so you do not fork them by accident.
 | Just ask | "where was I yesterday in the acctz-app repo?" triggers the skill on its own |
 | The resume command on your clipboard | "copy the resume command for that one", or `--copy <id-prefix>` from a terminal |
 | Run the script yourself | `python3 <plugin>/skills/find/scripts/find_sessions.py --help` |
+| Check the machine can run it | `python3 <plugin>/skills/find/scripts/find_sessions.py --doctor` |
 
 ## Skills
 
@@ -51,6 +52,18 @@ is installed it prints the command instead.
 ## Requirements
 
 macOS or Linux, Python 3.9 or newer, Claude Code 2.1.223 or newer (for `--resume <id>` from any directory).
+
+`--doctor` checks all of that plus the session store and clipboard tool, and says what to
+install if something is missing. It installs nothing; the skill never installs anything on
+your behalf either, it only tells you what to install.
+
+Where Python comes from on each OS:
+
+| OS | Python | Run as |
+|---|---|---|
+| macOS | Xcode Command Line Tools (`xcode-select --install`; 3.9.6 on current releases) or Homebrew | `python3` |
+| Linux | the distribution's `python3` package, usually already present | `python3` |
+| Windows | python.org installer or `winget install Python.Python.3` | `py -3` or `python` |
 
 Windows: the script carries Windows branches (a process check that never signals, PowerShell
 quoting, `clip`), but they are untested until the cross-platform CI lands, so Windows is not

@@ -18,6 +18,27 @@ only; the one exception is `--copy`, which writes to the clipboard when asked.
 Run it as `python3 <skill-dir>/scripts/find_sessions.py`. If `python3` is not on the path
 (typical on Windows), use `python` or `py -3` instead.
 
+## Preflight: when anything fails, diagnose before guessing
+
+The script checks its own Python version and the session store at startup and exits with a
+one-line reason. If any run fails for any reason (command not found, a version message, a
+traceback, "no session store"), run the doctor once and show the user its output:
+
+```bash
+python3 <skill-dir>/scripts/find_sessions.py --doctor
+```
+
+It reports the OS, Python version and path, the Claude Code version against the 2.1.223
+floor, whether the session store and the optional files exist, and which clipboard tool
+`--copy` would use. Each failing line says what to install. **Tell the user what to
+install and how; never install, upgrade, or change settings for them.** Do not run
+package managers, installers, `xcode-select`, `winget`, `apt`, `brew`, or similar.
+
+If Python itself is missing so the doctor cannot run, say so and give the per-OS route:
+macOS, the Xcode Command Line Tools (`xcode-select --install`) or Homebrew; Windows, the
+python.org installer or `winget install Python.Python.3`, then `py -3`; Linux, the
+distribution's `python3` package. Then stop and let the user do it.
+
 ## Two ways in
 
 **Invoked directly with no question** (`/claude-session-finder:find` on its own): the user

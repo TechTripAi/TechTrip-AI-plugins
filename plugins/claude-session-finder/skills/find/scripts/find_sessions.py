@@ -12,6 +12,7 @@ Typical uses:
   find_sessions.py --show c5aa0dd4      # last exchanges of one session (id prefix ok)
   find_sessions.py --copy c5aa0dd4      # put its resume command on the clipboard
   find_sessions.py --json               # machine-readable
+  find_sessions.py --doctor             # check Python, Claude Code, the session store, clipboard
 """
 from __future__ import annotations
 
@@ -26,6 +27,16 @@ import sys
 import time
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
+
+MIN_PYTHON = (3, 9)
+MIN_CLAUDE = (2, 1, 223)  # --resume <id> from any directory
+
+if sys.version_info < MIN_PYTHON:
+    sys.exit(
+        f"find_sessions.py needs Python {MIN_PYTHON[0]}.{MIN_PYTHON[1]} or newer; this is "
+        f"{sys.version_info.major}.{sys.version_info.minor} at {sys.executable}. "
+        "Run it with a newer interpreter (python3, python, or 'py -3' on Windows), or see --doctor."
+    )
 
 # --------------------------------------------------------------------------- paths
 
@@ -460,6 +471,102 @@ def find_one(sessions: List[Dict[str, Any]], key: str) -> Dict[str, Any]:
     return hits[0]
 
 
+# --------------------------------------------------------------------------- doctor
+
+
+def _os_label() -> str:
+    if sys.platform == "darwin":
+        return "macOS"
+    if WINDOWS:
+        return "Windows"
+    return "Linux" if sys.platform.startswith("linux") else sys.platform
+
+
+PYTHON_HINT = {
+    "macOS": "install the Xcode Command Line Tools (xcode-select --install) or Homebrew python (brew install python)",
+    "Windows": "install Python from python.org or 'winget install Python.Python.3', then run this script with 'py -3'",
+    "Linux": "install your distribution's python3 package (e.g. apt install python3, dnf install python3)",
+}
+CLIPBOARD_HINT = {
+    "macOS": "pbcopy ships with macOS; it should already be present",
+    "Windows": "clip ships with Windows; it should already be present",
+    "Linux": "install wl-clipboard (Wayland) or xclip / xsel (X11), e.g. apt install wl-clipboard",
+}
+
+
+def _claude_version() -> Optional[str]:
+    exe = shutil.which("claude")
+    if not exe:
+        return None
+    try:
+        out = subprocess.run([exe, "--version"], capture_output=True, text=True, timeout=15).stdout
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    m = re.search(r"(\d+)\.(\d+)\.(\d+)", out or "")
+    return m.group(0) if m else ""
+
+
+def run_doctor(cfg: str) -> None:
+    """Report whether this machine can run the finder. Advises what to install; never installs anything."""
+    osl = _os_label()
+    problems = 0
+
+    def line(ok: Optional[bool], label: str, detail: str, hint: str = "") -> None:
+        nonlocal problems
+        mark = "ok  " if ok else ("warn" if ok is None else "FAIL")
+        if ok is False:
+            problems += 1
+        print(f"[{mark}] {label}: {detail}")
+        if hint and not ok:
+            print(f"       -> {hint}")
+
+    line(True, "os", f"{osl} ({sys.platform})")
+    pyv = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+    line(sys.version_info >= MIN_PYTHON, "python", f"{pyv} at {sys.executable} (need {MIN_PYTHON[0]}.{MIN_PYTHON[1]}+)",
+         PYTHON_HINT.get(osl, "install Python 3.9 or newer"))
+
+    cv = _claude_version()
+    if cv is None:
+        line(None, "claude", "not on PATH from this shell; resume commands still work from a terminal that has it",
+             "install Claude Code, or open a terminal where 'claude' resolves")
+    elif not cv:
+        line(None, "claude", "found but version could not be read")
+    else:
+        vt = tuple(int(x) for x in cv.split("."))
+        line(vt >= MIN_CLAUDE, "claude", f"{cv} (need {'.'.join(map(str, MIN_CLAUDE))}+ for --resume <id> from any directory)",
+             "update Claude Code; older versions must resume from inside the project directory")
+
+    line(True, "config dir", cfg + ("" if os.environ.get("CLAUDE_CONFIG_DIR") else "  (default; set CLAUDE_CONFIG_DIR to relocate)"))
+    projects = os.path.join(cfg, "projects")
+    if os.path.isdir(projects):
+        n = len(glob.glob(os.path.join(projects, "*", "*.jsonl")))
+        line(True, "session store", f"{projects} ({n} transcript{'s' if n != 1 else ''})")
+    else:
+        line(False, "session store", f"{projects} not found",
+             "run Claude Code at least once on this machine, or point CLAUDE_CONFIG_DIR at the right place")
+    for name, label in (("history.jsonl", "prompt history"), ("sessions", "live-session markers")):
+        path = os.path.join(cfg, name)
+        line(True if os.path.exists(path) else None, label, path if os.path.exists(path) else f"{path} not found (optional)")
+    state = os.path.expanduser("~/.claude.json")
+    line(True if os.path.exists(state) else None, "project state", state if os.path.exists(state) else f"{state} not found (optional)")
+
+    if sys.platform == "darwin":
+        tools = ["pbcopy"]
+    elif WINDOWS:
+        tools = ["clip"]
+    else:
+        tools = ["wl-copy", "xclip", "xsel", "clip.exe"]
+    found = [t for t in tools if shutil.which(t)]
+    line(True if found else None, "clipboard (--copy)", f"will use {found[0]}" if found else "no clipboard tool found; --copy will print the command instead",
+         CLIPBOARD_HINT.get(osl, ""))
+
+    print()
+    if problems:
+        print(f"{problems} problem(s). Nothing was installed or changed; the lines above say what to install.")
+        sys.exit(1)
+    print("Ready. Nothing was installed or changed.")
+
+
 # --------------------------------------------------------------------------- filtering
 
 
@@ -598,6 +705,7 @@ def main() -> None:
     ap.add_argument("--include-empty", action="store_true", help="also list sessions with no transcript or no prompts")
     ap.add_argument("--show", metavar="ID|TITLE", help="print details and the last turns of one session (id prefix is fine)")
     ap.add_argument("--tail", type=int, default=6, help="with --show: how many turns to print (0 = all); default 6")
+    ap.add_argument("--doctor", action="store_true", help="check Python, Claude Code, the session store and clipboard; advises what to install, installs nothing")
     ap.add_argument("--copy", metavar="ID|TITLE", help="put one session's resume command on the clipboard (id prefix is fine) and print it")
     ap.add_argument("--json", action="store_true", help="emit JSON instead of text")
     args = ap.parse_args()
@@ -607,8 +715,11 @@ def main() -> None:
         args.deep = True
 
     cfg = config_dir()
+    if args.doctor:
+        run_doctor(cfg)
+        return
     if not os.path.isdir(os.path.join(cfg, "projects")):
-        sys.exit(f"No Claude Code session store found at {cfg}/projects (set CLAUDE_CONFIG_DIR if it lives elsewhere).")
+        sys.exit(f"No Claude Code session store found at {cfg}/projects (set CLAUDE_CONFIG_DIR if it lives elsewhere, or run --doctor).")
 
     sessions = collect_sessions(cfg, deep=args.deep)
     if args.copy:
