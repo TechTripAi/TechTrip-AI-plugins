@@ -273,6 +273,7 @@ Cheat sheet:
 | `--deep` | also search Claude's replies (slower) |
 | `--show <id-prefix>` `--tail 6` | final turns of one session |
 | `--copy <id-prefix>` | put that session's resume command on the clipboard |
+| `--doctor` | check Python, Claude Code, the session store and clipboard; says what to install, installs nothing |
 | `--running` / `--exclude-running` | live sessions only, or hide them |
 | `--branch <name>` | git branch filter |
 | `--json` | machine-readable, for jq or scripts |
@@ -280,6 +281,9 @@ Cheat sheet:
 Nothing it does modifies a file. It reads `~/.claude/projects`, `~/.claude/history.jsonl`,
 `~/.claude/sessions` and `~/.claude.json`. Set `CLAUDE_CONFIG_DIR` if yours lives elsewhere.
 The only thing it writes is your clipboard, and only when you pass `--copy`.
+
+**If something does not work,** run `--doctor` first. It tells you what is missing and what
+to install on your OS, and it never installs anything itself.
 
 **Copying a long id.** When a session is the newest in its directory the finder prints
 `cd <dir> && claude --continue`, which has no id to copy at all. Otherwise use `--copy`,

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.1 - 2026-09-25
+
+- Startup guard: the script exits with a one-line message when run under Python older than
+  3.9 instead of failing later.
+- `--doctor`: reports OS, Python, Claude Code version against the 2.1.223 floor, the session
+  store and optional files, and the clipboard tool `--copy` would use. Failing lines say what
+  to install for that OS. It installs nothing, and the skill is instructed never to install
+  or change settings on the user's behalf.
+- README: per-OS table of where Python comes from and how to invoke it.
+
 ## 0.2.0 - 2026-09-25
 
 - Session ids and resume commands are never presented in markdown tables, which the terminal
