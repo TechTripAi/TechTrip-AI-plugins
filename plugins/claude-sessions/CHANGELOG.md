@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.3.0 - 2026-09-28
+
+- **Renamed** from `claude-session-finder` to `claude-sessions`. The skill namespace is
+  now `/claude-sessions:find`, `/claude-sessions:summarize`, `/claude-sessions:brain-dump`.
+  Not yet publicly announced, so no compatibility shim for the old name.
+- **New skill `summarize`**: writes one session up as a markdown file organised by
+  discussion topic, with summary, decisions, action items, open questions, dangling
+  threads, files edited and a condensed transcript. Asks where to write (current directory
+  by default) and which appendix to include before writing anything.
+- **Script moved and restructured.** `scripts/sessions.py` at the plugin root is shared by
+  every skill (was `skills/find/scripts/find_sessions.py`). Flags became subcommands:
+  `list` (default when only flags are given), `show <id>`, `copy <id>`, `dump <id>`,
+  `doctor`. `references/session-storage.md` moved to the plugin root too.
+- **`list --here`**: sessions started in the current directory and below; `--exact` for
+  the directory alone. The `find` skill now answers "what have I done in this repo".
+- **`list --table`**: compact outlined table, one row per session, with the short ids
+  listed underneath rather than in the table.
+- **`dump <id>`**: clean, numbered transcript (your prompts, Claude's text, one line per
+  tool call; no tool output, thinking or subagent traffic). `--out FILE`, `--start/--end`
+  for chunks, `--max-chars`, `--no-tools`, `--stats` for size and suggested chunk ranges.
+  Anything that looks like a credential is masked unless `--no-redact`.
+- **`find` skill**: the shortlist is now a numbered markdown table (last active, project,
+  status, what you said) with short cells; ids, paths and commands still never go in a
+  table. The intro no longer claims the built-in picker cannot search content or reach
+  other projects, since it can; the pitch is state and the last exchange at a glance.
+- **brain-dump**: sections for "sessions in this directory" and "summarize it to a file";
+  cheat sheet uses the subcommands.
+
 ## 0.2.2 - 2026-09-25
 
 - README leads with a "First run" section: the tour, then the doctor, with the Claude

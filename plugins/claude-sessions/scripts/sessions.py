@@ -1,18 +1,22 @@
 #!/usr/bin/env python3
-"""List, search and inspect Claude Code sessions across every project on this machine.
+"""List, search, inspect and dump Claude Code sessions across every project on this machine.
 
 Reads only files Claude Code already writes under the config directory
 (``~/.claude`` or ``$CLAUDE_CONFIG_DIR``). Standard library only; Python 3.9+.
 
-Typical uses:
-  find_sessions.py                      # 10 most recent sessions, all projects
-  find_sessions.py --project acctz-app  # only sessions whose directory matches
-  find_sessions.py --grep "scott"       # sessions where you typed that text
-  find_sessions.py --since 2d           # last two days
-  find_sessions.py --show c5aa0dd4      # last exchanges of one session (id prefix ok)
-  find_sessions.py --copy c5aa0dd4      # put its resume command on the clipboard
-  find_sessions.py --json               # machine-readable
-  find_sessions.py --doctor             # check Python, Claude Code, the session store, clipboard
+Subcommands (``list`` is assumed when none is given):
+  sessions.py                          # 10 most recent sessions, all projects
+  sessions.py list --here              # sessions in this directory and below
+  sessions.py list --project acctz-app # only sessions whose directory matches
+  sessions.py list --grep "scott"      # sessions where you typed that text
+  sessions.py list --since 2d --table  # last two days, as a compact table
+  sessions.py show c5aa0dd4            # last exchanges of one session (id prefix ok)
+  sessions.py dump c5aa0dd4 --out f.md # clean transcript for summarising, secrets redacted
+  sessions.py copy c5aa0dd4            # put its resume command on the clipboard
+  sessions.py doctor                   # check Python, Claude Code, the session store, clipboard
+  sessions.py list --json              # machine-readable
+
+The only things it writes are the clipboard (``copy``) and the file you name (``dump --out``).
 """
 from __future__ import annotations
 
@@ -26,16 +30,17 @@ import subprocess
 import sys
 import time
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 MIN_PYTHON = (3, 9)
 MIN_CLAUDE = (2, 1, 223)  # --resume <id> from any directory
+SUBCOMMANDS = ("list", "show", "copy", "dump", "doctor")
 
 if sys.version_info < MIN_PYTHON:
     sys.exit(
-        f"find_sessions.py needs Python {MIN_PYTHON[0]}.{MIN_PYTHON[1]} or newer; this is "
+        f"sessions.py needs Python {MIN_PYTHON[0]}.{MIN_PYTHON[1]} or newer; this is "
         f"{sys.version_info.major}.{sys.version_info.minor} at {sys.executable}. "
-        "Run it with a newer interpreter (python3, python, or 'py -3' on Windows), or see --doctor."
+        "Run it with a newer interpreter (python3, python, or 'py -3' on Windows), or see 'doctor'."
     )
 
 # --------------------------------------------------------------------------- paths
@@ -471,6 +476,17 @@ def find_one(sessions: List[Dict[str, Any]], key: str) -> Dict[str, Any]:
     return hits[0]
 
 
+def short_status(status: str) -> str:
+    """One word for table cells."""
+    return {
+        "running": "running",
+        "closed (you typed exit)": "exited",
+        "closed (not shut down cleanly)": "crashed",
+        "closed (stale live record)": "closed",
+        "closed": "closed",
+    }.get(status, status)
+
+
 # --------------------------------------------------------------------------- doctor
 
 
@@ -507,7 +523,7 @@ def _claude_version() -> Optional[str]:
 
 
 def run_doctor(cfg: str) -> None:
-    """Report whether this machine can run the finder. Advises what to install; never installs anything."""
+    """Report whether this machine can run the scripts. Advises what to install; never installs anything."""
     osl = _os_label()
     problems = 0
 
@@ -557,7 +573,7 @@ def run_doctor(cfg: str) -> None:
     else:
         tools = ["wl-copy", "xclip", "xsel", "clip.exe"]
     found = [t for t in tools if shutil.which(t)]
-    line(True if found else None, "clipboard (--copy)", f"will use {found[0]}" if found else "no clipboard tool found; --copy will print the command instead",
+    line(True if found else None, "clipboard (copy)", f"will use {found[0]}" if found else "no clipboard tool found; 'copy' will print the command instead",
          CLIPBOARD_HINT.get(osl, ""))
 
     print()
@@ -575,8 +591,17 @@ def apply_filters(sessions: List[Dict[str, Any]], args: argparse.Namespace) -> L
     if not args.include_empty:
         out = [s for s in out if s["has_transcript"] and s["prompt_count"] > 0]
     if args.here:
-        cwd = os.getcwd()
-        out = [s for s in out if s["cwd"] == cwd]
+        here = os.path.realpath(os.getcwd())
+
+        def in_here(cwd: Optional[str]) -> bool:
+            if not cwd:
+                return False
+            rp = os.path.realpath(cwd)
+            if rp == here:
+                return True
+            return (not args.exact) and rp.startswith(here + os.sep)
+
+        out = [s for s in out if in_here(s["cwd"])]
     if args.project:
         needle = args.project.lower()
         out = [s for s in out if s["cwd"] and needle in s["cwd"].lower()]
@@ -603,15 +628,16 @@ def apply_filters(sessions: List[Dict[str, Any]], args: argparse.Namespace) -> L
     return out
 
 
-# --------------------------------------------------------------------------- output
+# --------------------------------------------------------------------------- list output
 
 
 def print_list(sessions: List[Dict[str, Any]], args: argparse.Namespace) -> None:
     if not sessions:
-        print("No sessions matched. Try --include-empty, a wider --since, or drop --project/--grep.")
+        print("No sessions matched. Try --include-empty, a wider --since, or drop --project/--here/--grep.")
         return
     shown = sessions[: args.limit] if args.limit else sessions
-    print(f"{len(shown)} of {len(sessions)} matching session(s), most recent first\n")
+    scope = " in this directory" + ("" if args.exact else " and below") if args.here else ""
+    print(f"{len(shown)} of {len(sessions)} matching session(s){scope}, most recent first\n")
     for i, s in enumerate(shown, 1):
         tag = "" if s["status"] == "closed" else f"  [{s['status']}]"
         print(f"{i}. {humanize(s['last_active'])} ({local_stamp(s['last_active'])}){tag}")
@@ -645,6 +671,48 @@ def print_list(sessions: List[Dict[str, Any]], args: argparse.Namespace) -> None
         print(f"({len(sessions) - len(shown)} more; raise --limit or narrow with --project/--since/--grep)")
 
 
+def print_table(sessions: List[Dict[str, Any]], args: argparse.Namespace) -> None:
+    """Compact outlined table: one row per session, nothing copyable in it (ids come from 'show')."""
+    if not sessions:
+        print("No sessions matched. Try --include-empty, a wider --since, or drop --project/--here/--grep.")
+        return
+    shown = sessions[: args.limit] if args.limit else sessions
+    rows: List[List[str]] = []
+    for i, s in enumerate(shown, 1):
+        when = f"{humanize(s['last_prompt_at'] if s.get('reopened_only') else s['last_active'])}"
+        stamp = local_stamp(s["last_prompt_at"] if s.get("reopened_only") else s["last_active"])
+        proj = os.path.basename(s["cwd"].rstrip("/\\")) if s["cwd"] else "?"
+        rows.append([
+            str(i),
+            f"{when} ({stamp[5:]})",
+            proj or s["cwd"] or "?",
+            short_status(s["status"]) + ("*" if s.get("reopened_only") else ""),
+            one_line(s["last_prompt"] or s["title"] or "", 60),
+        ])
+    heads = ["#", "last active", "project", "status", "you said"]
+    widths = [max(len(h), *(len(r[c]) for r in rows)) for c, h in enumerate(heads)]
+    widths = [min(w, cap) for w, cap in zip(widths, (4, 30, 28, 9, 60))]
+
+    def fmt(cells: List[str]) -> str:
+        return "| " + " | ".join(one_line(c, w).ljust(w) for c, w in zip(cells, widths)) + " |"
+
+    rule = "+" + "+".join("-" * (w + 2) for w in widths) + "+"
+    scope = " in this directory" + ("" if args.exact else " and below") if args.here else ""
+    print(f"{len(shown)} of {len(sessions)} matching session(s){scope}, most recent first\n")
+    print(rule)
+    print(fmt(heads))
+    print(rule)
+    for r in rows:
+        print(fmt(r))
+    print(rule)
+    if any(s.get("reopened_only") for s in shown):
+        print("* only reopened and exited later; the date shown is the last real conversation")
+    if len(sessions) > len(shown):
+        print(f"({len(sessions) - len(shown)} more; raise --limit or narrow with --project/--since/--grep)")
+    print("\nRow number -> 'show <id-prefix>' for the id and resume command; ids are deliberately not in this table.")
+    print("ids in order: " + ", ".join(s["session_id"][:8] for s in shown))
+
+
 def print_show(sessions: List[Dict[str, Any]], prefix: str, tail: int) -> None:
     s = find_one(sessions, prefix)
     print(f"session:  {s['session_id']}   [{s['status']}]")
@@ -663,7 +731,7 @@ def print_show(sessions: List[Dict[str, Any]], prefix: str, tail: int) -> None:
     turns.sort(key=lambda x: x[0])
     turns = turns[-tail:] if tail else turns
     label = f"last {len(turns)} turn(s)" if tail else "all turns"
-    print(f"--- {label} (run with --deep to include Claude's replies) ---" if not s["assistant_texts"] else f"--- {label} ---")
+    print(f"--- {label} ---")
     for ts, who, text in turns:
         print(f"[{local_stamp(ts)}] {who}:")
         for ln in text.strip().splitlines()[:12]:
@@ -687,43 +755,271 @@ def to_json(sessions: List[Dict[str, Any]], args: argparse.Namespace) -> None:
     print()
 
 
+# --------------------------------------------------------------------------- dump (clean transcript)
+
+# Patterns that look like credentials. Deliberately broad: a false positive costs a few
+# characters of a summary, a false negative copies a key into a file that may be shared.
+_SECRET_PATTERNS: List[Tuple[re.Pattern, str]] = [
+    (re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----", re.S), "[REDACTED private key]"),
+    (re.compile(r"\bsk-(?:ant-)?[A-Za-z0-9_-]{16,}"), "[REDACTED api key]"),
+    (re.compile(r"\b(?:ghp|gho|ghs|ghu|ghr)_[A-Za-z0-9]{20,}"), "[REDACTED github token]"),
+    (re.compile(r"\bgithub_pat_[A-Za-z0-9_]{20,}"), "[REDACTED github token]"),
+    (re.compile(r"\bAKIA[0-9A-Z]{16}\b"), "[REDACTED aws key id]"),
+    (re.compile(r"\bxox[baprs]-[A-Za-z0-9-]{10,}"), "[REDACTED slack token]"),
+    (re.compile(r"\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}"), "[REDACTED jwt]"),
+    (re.compile(r"(?i)\bbearer\s+[A-Za-z0-9._~+/=-]{16,}"), "Bearer [REDACTED]"),
+    (re.compile(r"://([^/\s:@]+):([^@\s/]+)@"), "://[REDACTED]@"),
+    (re.compile(r"(?i)\b((?:api[_-]?key|secret[_-]?key|access[_-]?token|auth[_-]?token|client[_-]?secret|password|passwd|secret|token)\s*[=:]\s*[\"']?)([^\s\"'`,;\[]{8,})"), r"\1[REDACTED]"),
+]
+
+
+def redact(text: str) -> Tuple[str, int]:
+    """Mask things that look like credentials. Returns (text, number of replacements)."""
+    n = 0
+    for pat, repl in _SECRET_PATTERNS:
+        text, k = pat.subn(repl, text)
+        n += k
+    return text, n
+
+
+def tool_line(name: str, inp: Any) -> str:
+    """One line describing a tool call, without its payload."""
+    inp = inp if isinstance(inp, dict) else {}
+    if name == "Bash":
+        desc = inp.get("description") or inp.get("command", "")
+    elif name in ("Read", "Edit", "Write", "MultiEdit"):
+        desc = inp.get("file_path", "")
+    elif name == "NotebookEdit":
+        desc = inp.get("notebook_path", "")
+    elif name in ("Grep", "Glob"):
+        desc = inp.get("pattern", "")
+    elif name in ("Agent", "Task"):
+        desc = inp.get("description", "")
+    elif name == "Skill":
+        desc = inp.get("skill", "")
+    elif name == "AskUserQuestion":
+        desc = "; ".join(q.get("question", "") for q in inp.get("questions", []) if isinstance(q, dict))
+    elif name in ("WebFetch", "WebSearch"):
+        desc = inp.get("url") or inp.get("query", "")
+    else:
+        try:
+            desc = json.dumps(inp)
+        except (TypeError, ValueError):
+            desc = ""
+    return f"[{name}] {one_line(str(desc), 110)}" if desc else f"[{name}]"
+
+
+def read_turns(path: str) -> List[Dict[str, Any]]:
+    """The conversation as ordered turns: your prompts, Claude's text, and one line per tool call.
+
+    Tool results, thinking blocks, subagent traffic and UI records are dropped. Consecutive
+    assistant records (text, then tool calls, then more text) are merged into one turn.
+    """
+    turns: List[Dict[str, Any]] = []
+    with open(path, encoding="utf-8", errors="replace") as fh:
+        for line in fh:
+            if not line.startswith("{"):
+                continue
+            if '"type":"user"' not in line and '"type":"assistant"' not in line:
+                continue
+            try:
+                d = json.loads(line)
+            except ValueError:
+                continue
+            if d.get("isSidechain"):
+                continue
+            t = d.get("type")
+            ts = parse_iso(d["timestamp"]) if isinstance(d.get("timestamp"), str) else None
+            msg = d.get("message") or {}
+            if t == "user":
+                if d.get("isMeta") or d.get("toolUseResult") is not None:
+                    continue
+                content = msg.get("content")
+                if isinstance(content, list) and any(isinstance(b, dict) and b.get("type") == "tool_result" for b in content):
+                    continue
+                text = clean_prompt(message_text(msg))
+                if text:
+                    turns.append({"ts": ts, "who": "you", "text": text, "tools": []})
+            elif t == "assistant":
+                content = msg.get("content")
+                texts: List[str] = []
+                tools: List[str] = []
+                if isinstance(content, str):
+                    texts.append(content)
+                elif isinstance(content, list):
+                    for b in content:
+                        if not isinstance(b, dict):
+                            continue
+                        if b.get("type") == "text" and b.get("text", "").strip():
+                            texts.append(b["text"].strip())
+                        elif b.get("type") == "tool_use":
+                            tools.append(tool_line(str(b.get("name", "?")), b.get("input")))
+                if not texts and not tools:
+                    continue
+                if turns and turns[-1]["who"] == "claude":
+                    cur = turns[-1]
+                    if texts:
+                        cur["text"] = (cur["text"] + "\n\n" + "\n\n".join(texts)).strip()
+                    cur["tools"].extend(tools)
+                    cur["ts_end"] = ts
+                else:
+                    turns.append({"ts": ts, "who": "claude", "text": "\n\n".join(texts), "tools": tools, "ts_end": ts})
+    return turns
+
+
+def run_dump(sessions: List[Dict[str, Any]], args: argparse.Namespace) -> None:
+    s = find_one(sessions, args.id)
+    if not s["has_transcript"]:
+        sys.exit("That session has no transcript on disk; nothing to dump.")
+    turns = read_turns(s["transcript"])
+    total = len(turns)
+    first = max(1, args.start or 1)
+    last = min(total, args.end) if args.end else total
+    sel = turns[first - 1:last]
+
+    files_touched: List[str] = []
+    for tr in turns:
+        for tl in tr["tools"]:
+            if tl.startswith(("[Edit]", "[Write]", "[MultiEdit]", "[NotebookEdit]")):
+                p = tl.split("] ", 1)[1] if "] " in tl else ""
+                if p and p not in files_touched:
+                    files_touched.append(p)
+
+    redactions = 0
+    out: List[str] = []
+    out.append(f"# Session {s['session_id']}")
+    out.append(f"title:        {s['title']}")
+    out.append(f"dir:          {s['cwd'] or '?'}" + (f"   branch: {s['branch']}" if s["branch"] and s["branch"] != "HEAD" else ""))
+    out.append(f"started:      {local_stamp(s['started_at'])}   last active: {local_stamp(s['last_active'])}")
+    if s.get("reopened_only"):
+        out.append(f"note:         last real conversation {local_stamp(s['last_prompt_at'])}; later activity was only reopening and exiting")
+    out.append(f"status:       {s['status']}")
+    extras = [f"{s['prompt_count']} prompts", f"{total} turns"]
+    if s["subagent_count"]:
+        extras.append(f"{s['subagent_count']} subagents")
+    if s["cost_usd"]:
+        extras.append(f"${s['cost_usd']:.2f}")
+    out.append(f"size:         {', '.join(extras)}, transcript {s['size_bytes'] // 1024} KB")
+    out.append(f"resume:       {s['resume_command']}")
+    if s.get("resume_alt"):
+        out.append(f"or:           {s['resume_alt']}")
+    if files_touched:
+        out.append("files edited: " + "; ".join(files_touched[:40]) + (" …" if len(files_touched) > 40 else ""))
+    out.append(f"turns shown:  {first}-{last} of {total}" + ("" if (first == 1 and last == total) else "  (partial; use --start/--end for the rest)"))
+    out.append("")
+    out.append("---")
+    out.append("")
+    for i, tr in enumerate(sel, first):
+        stamp = local_stamp(tr["ts"])
+        text = tr["text"]
+        if args.max_chars and len(text) > args.max_chars:
+            text = text[: args.max_chars] + f"\n… [{len(tr['text']) - args.max_chars} more chars trimmed]"
+        if not args.no_redact:
+            text, k = redact(text)
+            redactions += k
+        out.append(f"### {i}. [{stamp}] {tr['who']}")
+        if tr["tools"] and not args.no_tools:
+            shown_tools = tr["tools"][:25]
+            for tl in shown_tools:
+                if not args.no_redact:
+                    tl, k = redact(tl)
+                    redactions += k
+                out.append(f"    tool: {tl}")
+            if len(tr["tools"]) > 25:
+                out.append(f"    tool: … {len(tr['tools']) - 25} more tool calls")
+        if text:
+            out.append(text)
+        out.append("")
+
+    body = "\n".join(out)
+    head_note = ("redaction:    off (--no-redact)" if args.no_redact
+                 else f"redaction:    {redactions} item(s) that looked like credentials were masked")
+    body = body.replace("\n---\n", f"\n{head_note}\n\n---\n", 1)
+    chars = len(body)
+    stats = (f"{total} turns, {chars} chars (~{chars // 4} tokens) in this dump; "
+             f"{len(files_touched)} file(s) edited; {redactions} redaction(s)")
+
+    if args.stats:
+        print(f"session:  {s['session_id']}   {s['title']}")
+        print(f"dir:      {s['cwd']}")
+        print(stats)
+        if chars > 150000:
+            step = max(10, int(total * 120000 / chars))
+            ranges = [f"--start {a} --end {min(total, a + step - 1)}" for a in range(1, total + 1, step)]
+            print("large; read it in pieces:  " + "   ".join(ranges))
+        return
+    if args.out:
+        with open(args.out, "w", encoding="utf-8") as fh:
+            fh.write(body)
+        print(f"wrote {args.out}\n{stats}")
+    else:
+        sys.stdout.write(body)
+        print(stats, file=sys.stderr)
+
+
 # --------------------------------------------------------------------------- main
 
 
+def build_parser() -> argparse.ArgumentParser:
+    ap = argparse.ArgumentParser(prog="sessions.py", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = ap.add_subparsers(dest="cmd", metavar="SUBCOMMAND")
+
+    ls = sub.add_parser("list", help="list sessions (default subcommand)", description="List sessions, newest first. All filters combine.")
+    ls.add_argument("--limit", type=int, default=10, help="how many sessions to print (0 = all); default 10")
+    ls.add_argument("--all", action="store_true", help="same as --limit 0")
+    ls.add_argument("--here", action="store_true", help="only sessions in the current directory and below")
+    ls.add_argument("--exact", action="store_true", help="with --here: this directory only, not subdirectories")
+    ls.add_argument("--project", metavar="SUBSTR", help="only sessions whose working directory contains this text")
+    ls.add_argument("--branch", metavar="NAME", help="only sessions on this git branch")
+    ls.add_argument("--since", metavar="DUR|DATE", help="only sessions active since e.g. 2d, 36h, 3w or 2026-09-20")
+    ls.add_argument("--grep", metavar="REGEX", help="only sessions where you typed something matching this (case-insensitive)")
+    ls.add_argument("--deep", action="store_true", help="also read Claude's replies (slower); needed for --grep on replies")
+    ls.add_argument("--running", action="store_true", help="only sessions with a live Claude process")
+    ls.add_argument("--exclude-running", action="store_true", help="hide sessions with a live Claude process (e.g. this one)")
+    ls.add_argument("--include-empty", action="store_true", help="also list sessions with no transcript or no prompts")
+    ls.add_argument("--table", action="store_true", help="compact outlined table, one row per session (no ids in it)")
+    ls.add_argument("--json", action="store_true", help="emit JSON instead of text")
+
+    sh = sub.add_parser("show", help="details and the last turns of one session", description="Print one session's header and final turns.")
+    sh.add_argument("id", metavar="ID|TITLE", help="session id prefix or exact title")
+    sh.add_argument("--tail", type=int, default=6, help="how many turns to print (0 = all); default 6")
+
+    cp = sub.add_parser("copy", help="put one session's resume command on the clipboard", description="Copy the resume command and print it.")
+    cp.add_argument("id", metavar="ID|TITLE", help="session id prefix or exact title")
+
+    dp = sub.add_parser("dump", help="clean transcript of one session for summarising",
+                        description="Write the conversation as numbered turns: your prompts, Claude's replies, one line per tool call. "
+                                    "Tool output and thinking are dropped. Things that look like credentials are masked unless --no-redact.")
+    dp.add_argument("id", metavar="ID|TITLE", help="session id prefix or exact title")
+    dp.add_argument("--out", metavar="FILE", help="write here instead of stdout (the only file this script ever writes)")
+    dp.add_argument("--start", type=int, metavar="N", help="first turn to include (1-based)")
+    dp.add_argument("--end", type=int, metavar="N", help="last turn to include")
+    dp.add_argument("--max-chars", type=int, default=0, metavar="N", help="trim each turn's text to N chars (0 = no trim)")
+    dp.add_argument("--no-tools", action="store_true", help="omit the tool-call lines")
+    dp.add_argument("--no-redact", action="store_true", help="do not mask things that look like credentials")
+    dp.add_argument("--stats", action="store_true", help="print size only, plus suggested --start/--end ranges for big sessions")
+
+    sub.add_parser("doctor", help="check Python, Claude Code, the session store and clipboard; installs nothing",
+                   description="Report whether this machine can run these scripts. Advises what to install; never installs anything.")
+    return ap
+
+
 def main() -> None:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--limit", type=int, default=10, help="how many sessions to print (0 = all); default 10")
-    ap.add_argument("--all", action="store_true", help="same as --limit 0")
-    ap.add_argument("--project", metavar="SUBSTR", help="only sessions whose working directory contains this text")
-    ap.add_argument("--here", action="store_true", help="only sessions started in the current directory")
-    ap.add_argument("--branch", metavar="NAME", help="only sessions on this git branch")
-    ap.add_argument("--since", metavar="DUR|DATE", help="only sessions active since e.g. 2d, 36h, 3w or 2026-09-20")
-    ap.add_argument("--grep", metavar="REGEX", help="only sessions where you typed something matching this (case-insensitive)")
-    ap.add_argument("--deep", action="store_true", help="also read Claude's replies (slower); needed for --grep on replies and for --show")
-    ap.add_argument("--running", action="store_true", help="only sessions with a live Claude process")
-    ap.add_argument("--exclude-running", action="store_true", help="hide sessions with a live Claude process (e.g. this one)")
-    ap.add_argument("--include-empty", action="store_true", help="also list sessions with no transcript or no prompts")
-    ap.add_argument("--show", metavar="ID|TITLE", help="print details and the last turns of one session (id prefix is fine)")
-    ap.add_argument("--tail", type=int, default=6, help="with --show: how many turns to print (0 = all); default 6")
-    ap.add_argument("--doctor", action="store_true", help="check Python, Claude Code, the session store and clipboard; advises what to install, installs nothing")
-    ap.add_argument("--copy", metavar="ID|TITLE", help="put one session's resume command on the clipboard (id prefix is fine) and print it")
-    ap.add_argument("--json", action="store_true", help="emit JSON instead of text")
-    args = ap.parse_args()
-    if args.all:
-        args.limit = 0
-    if args.show:
-        args.deep = True
+    argv = sys.argv[1:]
+    if not argv or (argv[0] not in SUBCOMMANDS and argv[0] not in ("-h", "--help")):
+        argv = ["list"] + argv  # bare flags mean 'list'
+    args = build_parser().parse_args(argv)
 
     cfg = config_dir()
-    if args.doctor:
+    if args.cmd == "doctor":
         run_doctor(cfg)
         return
     if not os.path.isdir(os.path.join(cfg, "projects")):
-        sys.exit(f"No Claude Code session store found at {cfg}/projects (set CLAUDE_CONFIG_DIR if it lives elsewhere, or run --doctor).")
+        sys.exit(f"No Claude Code session store found at {cfg}/projects (set CLAUDE_CONFIG_DIR if it lives elsewhere, or run 'doctor').")
 
-    sessions = collect_sessions(cfg, deep=args.deep)
-    if args.copy:
-        s = find_one(sessions, args.copy)
+    if args.cmd == "copy":
+        sessions = collect_sessions(cfg, deep=False)
+        s = find_one(sessions, args.id)
         if not s["has_transcript"]:
             sys.exit(s["resume_command"])
         cmd = s["resume_command"]
@@ -736,12 +1032,23 @@ def main() -> None:
         else:
             print(f"no clipboard tool found (pbcopy, clip, wl-copy, xclip, xsel); copy this line yourself:\n{cmd}")
         return
-    if args.show:
-        print_show(sessions, args.show, args.tail)
+    if args.cmd == "show":
+        sessions = collect_sessions(cfg, deep=True)
+        print_show(sessions, args.id, args.tail)
         return
-    sessions = apply_filters(sessions, args)
+    if args.cmd == "dump":
+        sessions = collect_sessions(cfg, deep=False)
+        run_dump(sessions, args)
+        return
+
+    # list
+    if args.all:
+        args.limit = 0
+    sessions = apply_filters(collect_sessions(cfg, deep=args.deep), args)
     if args.json:
         to_json(sessions, args)
+    elif args.table:
+        print_table(sessions, args)
     else:
         print_list(sessions, args)
 

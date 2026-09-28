@@ -57,7 +57,19 @@ UTC), `cwd`, `gitBranch`, `version`, `entrypoint`.
 - Retention: `cleanupPeriodDays` in `settings.json`, default 30.
 - `CLAUDE_CODE_SKIP_PROMPT_HISTORY` or `--no-session-persistence` suppress transcript writes.
 
-## Gaps the built-in tools leave (why this skill exists)
+## What the built-in tools do and do not give you (why this plugin exists)
 
-No cross-project listing in text or JSON, no search over what was said, no view of the last
-exchange without opening the session, and no flag for sessions that ended abnormally.
+The picker (`claude --resume`, `/resume`) reaches every project with Ctrl+A, searches names
+and content, previews with Space, and resumes by id from any directory (2.1.223+). What it
+does not show: which sessions ended without a clean shutdown, which are still owned by a
+live process, the last exchange of each without opening it, a text or JSON listing usable
+from a shell, and any way to turn a transcript into a document. `scripts/sessions.py`
+covers those; the `dump` subcommand is what the summarize skill reads.
+
+## What `dump` keeps and drops
+
+Kept: `user` records that are real prompts (no `toolUseResult`, no `tool_result` blocks,
+not `isMeta`), and the `text` and `tool_use` blocks of `assistant` records, merged into one
+turn per reply. Each `tool_use` becomes one line (`[Bash] <description>`, `[Edit] <path>`).
+Dropped: tool results, `thinking` blocks, `isSidechain` (subagent) records, and every
+non-message record type. Credential-looking strings are masked before output.
