@@ -28,7 +28,7 @@ rules: say what to install, never install it.
 If the user named it clearly (a title, an id prefix, "the acctz-app one from yesterday"),
 resolve it with `list` and the find skill's filters (`--project`, `--since`, `--grep`,
 `--here`). If more than one fits, shortlist with the find skill's table and ask with
-AskUserQuestion. If the user says "this session", it is the one marked `[running]` in the
+AskUserQuestion. If the user says "this session", it is the one marked `[running, working]` in the
 current directory. Confirm the pick in one line (title, directory, last active) before
 going further, so the user can stop you if it is the wrong one.
 

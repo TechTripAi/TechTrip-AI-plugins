@@ -1,6 +1,6 @@
 # Where Claude Code keeps sessions
 
-Verified against Claude Code 2.1.283 on macOS, September 2026. The transcript format is
+Verified against Claude Code 2.1.284 on macOS, September 2026. The transcript format is
 internal and can change between versions; the script prefilters lines by type so unknown
 record types are ignored rather than fatal.
 
@@ -15,7 +15,8 @@ https://code.claude.com/docs/en/cli-reference
 | `~/.claude/projects/<encoded cwd>/<session-id>/subagents/agent-*.jsonl` | Subagent transcripts for that session. | Counted, not read. |
 | `~/.claude/projects/<encoded cwd>/memory/` | Claude's persistent memory for that project. | Ignored. |
 | `~/.claude/history.jsonl` | One line per prompt the user typed: `display`, `timestamp` (ms), `project`, `sessionId`, `pastedContents`. | Cheapest way to get "last thing I said"; also reveals sessions that never wrote a transcript. |
-| `~/.claude/sessions/<pid>.json` | Sessions Claude Code believes are live: `pid`, `sessionId`, `cwd`, `status`, derived `name`. | Status `running` if the pid is alive, `stale live record` otherwise. |
+| `claude agents --json` (a command, not a file) | Claude Code's own list of live sessions, interactive and background, the one its agent view (`claude agents`) shows: `sessionId`, `pid`, `cwd`, `kind`, `name`, `status` (`busy` or `idle`), `startedAt`. The docs name it as the supported programmatic interface (rather than `~/.claude/jobs/`). `--all` adds completed background sessions (not used yet). | Primary source for `running`; `busy` becomes `working`, `idle` stays `idle`; `name` is the agent-view name. Skipped when `claude` is not on the path or the command fails. About 0.1 s. |
+| `~/.claude/sessions/<pid>.json` | Sessions Claude Code believes are live: `pid`, `sessionId`, `cwd`, `kind`, `status` (`busy`/`idle`), `name` and `nameSource` (`derived`, or `custom` after Ctrl+R in agent view), `version`, `updatedAt`. | Fallback for `running` (pid alive) and `stale live record` (pid gone); also supplies `nameSource`, which the JSON lacks, so a custom agent-view name can rank as a title. |
 | `~/.claude.json` → `projects.<cwd>` | Per-directory state, including `lastSessionId` and `lastGracefulShutdown`. | Flags `closed (not shut down cleanly)`. |
 
 `CLAUDE_CONFIG_DIR` relocates `~/.claude`. `CLAUDE_CODE_PROJECT_DIR_NAME` (2.1.234+)

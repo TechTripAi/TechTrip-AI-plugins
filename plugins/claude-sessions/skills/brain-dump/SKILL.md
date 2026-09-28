@@ -134,11 +134,13 @@ list my sessions in acctz-app from the last week, with the last thing I said in 
 show every claude session I had this month across all projects, newest first
 ```
 
-**Expect:** a numbered table: last active, status, the full session id, the full
-directory, the last thing you said. Ids and paths are never shortened, so you can copy
-them straight from the row; pick a row and Claude gives its resume command in a code
-block. Sessions that started before the
-window but were active inside it are included, and Claude says so.
+**Expect:** a numbered table: status, last active, title, the full session id, the full
+directory, the last thing you said. The status uses the same icons and words as Claude
+Code's own agent view (`claude agents`): `✽ working`, `✻ running`, `∙ exited`,
+`! crashed`, and a long list is grouped under those headings. Ids and paths are never
+shortened, so you can copy them straight from the row; pick a row and Claude gives its
+resume command in a code block. Sessions that started before the window but were active
+inside it are included, and Claude says so.
 
 ---
 
@@ -242,20 +244,31 @@ Inside a running session, `/resume` switches to another session without leaving 
 
 ## Section 8: Sessions still running
 
-**Explain:** The finder checks for a live Claude process on each session. If it finds one,
-the entry is marked `running`. Resuming a running session from a second terminal forks
-it: two copies then diverge and neither knows about the other. Usually the right move is
-to find the terminal tab that still has it.
+**Explain:** The finder asks Claude Code which sessions are live, the same list its agent
+view shows (`claude agents`, the screen for switching between sessions). A live entry is
+marked `running`, with `working` when Claude is mid-turn and `idle` when it is waiting
+for you, and it carries the name agent view uses for it. Resuming a running session from
+a second terminal forks it: two copies then diverge and neither knows about the other.
+Usually the right move is to find the terminal tab that still has it, or to open it from
+agent view. The finder and agent view split the job: agent view is for what is running
+now, the finder is for everything that has ever run, including what was said in it.
 
 **Prompt: type into Claude Code**
 ```
-which of my claude sessions are still running right now?
+which of my claude sessions are still running right now, and what is each one doing?
 ```
 
-**Expect:** any live sessions with their process id and directory. If you truly cannot find
-the window and want to continue here, the finder gives the fork command:
+**Expect:** any live sessions with working or idle, their process id, directory and
+agent-view name. If you truly cannot find the window and want to continue here, the
+finder gives the fork command:
 ```
 claude --resume <session-id> --fork-session
+```
+To jump to a live session instead of forking it, open agent view from a terminal:
+
+**Shell: run in your terminal**
+```
+claude agents
 ```
 
 ---
@@ -331,12 +344,13 @@ Cheat sheet:
 |---|---|
 | (none) | 10 most recent sessions, all projects |
 | `list --here` | sessions in this directory and below (`--exact` for this directory only) |
-| `list --table` | outlined table, one row per session, full ids and directories |
+| `list --table` | outlined table, one row per session, full ids and directories, grouped by state like agent view |
+| `list --table --group-by dir` | the same table grouped by directory (`--group-by none` for one flat table) |
 | `list --all` / `--limit N` | more or fewer |
 | `list --project <substr>` | directory contains this |
 | `list --since 2d` / `7d` / `2026-09-01` | activity window |
 | `list --grep "<regex>"` | you typed something matching this (`--deep` also searches Claude's replies) |
-| `list --running` / `--exclude-running` | live sessions only, or hide them |
+| `list --running` / `--exclude-running` | live sessions only (each marked working or idle), or hide them |
 | `list --branch <name>` | git branch filter |
 | `list --json` | machine-readable, for jq or scripts |
 | `list --no-redact` / `show <id> --no-redact` | show prompts and replies as typed, credentials unmasked |

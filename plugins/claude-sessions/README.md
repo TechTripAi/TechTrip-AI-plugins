@@ -16,7 +16,10 @@ already writes and answers questions like:
 
 For each match you get the directory, session id, status, last active time, the last thing
 you said, Claude's last reply, and a copy-paste resume command. Sessions still running in
-another terminal are flagged so you do not fork them by accident. A summary is a markdown
+another terminal are flagged so you do not fork them by accident, with the same icons,
+state words and grouping as Claude Code's agent view (`claude agents`): agent view is
+the screen for what is running now, this plugin is for everything that has ever run and
+what was said in it. A summary is a markdown
 file organised by discussion topic: summary, decisions, action items, open questions,
 dangling threads, files edited, and a condensed transcript.
 
@@ -72,7 +75,10 @@ use `py -3` instead of `python3`.
 
 - `find`: locate sessions. Runs the bundled script and presents a shortlist table with the
   full session id and directory in each row, then the chosen session's resume command in a
-  code block. Ids, paths and commands are never shortened.
+  code block. Ids, paths and commands are never shortened. The status column reads like
+  agent view: `✽ working`, `✻ running`, `∙ exited`, `! crashed`, `∙ closed`; `list --table`
+  groups rows under Working, Running, Needs attention and Closed (`--group-by dir` for
+  directories, `--group-by none` for one flat table).
 - `summarize`: write one session up as a markdown file. Asks where to put it (current
   directory by default) and whether to include the condensed transcript before writing.
 - `brain-dump`: the teacher. A menu-driven tour that hands you the exact prompts to type. It
@@ -85,8 +91,10 @@ with subcommands `list`, `show`, `copy`, `dump` and `doctor`. Bare flags mean `l
 
 Reads only files Claude Code already writes under `~/.claude` (or `$CLAUDE_CONFIG_DIR`):
 the per-project transcripts, the prompt history, the live-session markers, and the
-per-project shutdown state. Nothing leaves the machine. See
-`references/session-storage.md` for the full map.
+per-project shutdown state. For which sessions are live, and whether each is working or
+idle, it runs `claude agents --json`, Claude Code's own supported listing (the one behind
+agent view), and falls back to the live-session markers when `claude` is not on the path.
+Nothing leaves the machine. See `references/session-storage.md` for the full map.
 
 It writes two things, both only when asked:
 

@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.4.0 - 2026-09-28
+
+- **Reads agent view.** Which sessions are live now comes from `claude agents --json`,
+  the supported interface behind Claude Code's agent view (`claude agents`), with the
+  `~/.claude/sessions/<pid>.json` markers as the fallback when `claude` is not on the
+  path. A running session now says whether it is `working` (mid-turn) or `idle` (waiting
+  for you), and carries agent view's name for it (`name:` in the listing, `name` in
+  `--json`); a name set in agent view with Ctrl+R is used as the title, like `/rename`.
+  The listing tag is `[running, working]` / `[running, idle]`.
+- **`list --table` reads like agent view.** Rows are grouped under Working, Running,
+  Needs attention (crashed, stale live record) and Closed, in that order, with agent
+  view's icons in the status cell (`✽ working`, `✻ running`, `! crashed`, `∙ exited`,
+  `∙ closed`; ASCII stand-ins on a console that cannot draw them) and a trimmed title
+  column. `--group-by dir` groups by directory instead and drops the directory column,
+  since the heading is the full path; `--group-by none` is the old flat table. Row
+  numbers run on across groups. Ids and directories stay complete.
+- **find** presents its shortlist with the same status vocabulary and explains the
+  working / idle split; **brain-dump** section 8 covers agent view and how the two
+  tools divide the job (agent view for now, this plugin for everything that has run).
+- `references/session-storage.md` documents `claude agents --json` and the pid-file
+  fields now used (`status`, `name`, `nameSource`). Verified against Claude Code 2.1.284.
+
 ## 0.3.0 - 2026-09-28
 
 - **Renamed** from `claude-session-finder` to `claude-sessions`. The skill namespace is
