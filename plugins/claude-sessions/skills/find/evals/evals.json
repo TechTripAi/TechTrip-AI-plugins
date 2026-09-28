@@ -28,7 +28,13 @@
     {
       "id": 5,
       "prompt": "which of my sessions from this week were in workspace-ai? I'll pick one and then I want the resume command on my clipboard",
-      "expected_output": "Phase one: a numbered shortlist (time, directory, quoted last prompt) without ids, offered through the AskUserQuestion picker or a prose question. After the pick: the session id on its own line, the resume command in a code block, and the script run with --copy <id-prefix> so the command is on the clipboard, reporting which tool copied it.",
+      "expected_output": "Phase one: a numbered shortlist (time, directory, quoted last prompt) without ids, offered through the AskUserQuestion picker or a prose question. After the pick: the session id on its own line, the resume command in a code block, and the script run with copy <id-prefix> so the command is on the clipboard, reporting which tool copied it.",
+      "files": []
+    },
+    {
+      "id": 6,
+      "prompt": "what claude sessions have I had in this directory? show me what each one ended on",
+      "expected_output": "Runs the script with list --here (directory and subdirectories) and presents a numbered markdown table with last active, project basename, status and the quoted last prompt, with no ids, paths or commands in the table. Flags any row that is running in another terminal or crashed. Offers the resume command for a chosen row in a code block.",
       "files": []
     }
   ]

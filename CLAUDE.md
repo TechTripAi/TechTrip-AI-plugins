@@ -30,22 +30,23 @@ add dependencies. Validate the catalog with `claude plugin validate .`.
 ```bash
 # Load a plugin into a session without installing it, then /reload-plugins after edits.
 # Use this for iteration: the installed copy is a version-keyed cache and does not see edits.
-claude --plugin-dir ./plugins/claude-session-finder
+claude --plugin-dir ./plugins/claude-sessions
 
 # Refresh the installed (user-scope) copy after a version bump; a new session picks it up.
 # With an unchanged version it reports "already at the latest version" and copies nothing.
-claude plugin update claude-session-finder@TechTrip-AI-plugins
+claude plugin update claude-sessions@TechTrip-AI-plugins
 
 # Run a bundled script directly (the only executable code in the repo)
-python3 plugins/claude-session-finder/skills/find/scripts/find_sessions.py --help
-python3 plugins/claude-session-finder/skills/find/scripts/find_sessions.py --grep "text" --since 7d --json
+python3 plugins/claude-sessions/scripts/sessions.py --help
+python3 plugins/claude-sessions/scripts/sessions.py list --grep "text" --since 7d --json
+python3 plugins/claude-sessions/scripts/sessions.py dump <id-prefix> --stats
 
 # Syntax check a script (no test suite exists)
-python3 -m py_compile plugins/claude-session-finder/skills/find/scripts/find_sessions.py
+python3 -m py_compile plugins/claude-sessions/scripts/sessions.py
 
 # Validate the JSON manifests
 python3 -m json.tool .claude-plugin/marketplace.json
-python3 -m json.tool plugins/claude-session-finder/.claude-plugin/plugin.json
+python3 -m json.tool plugins/claude-sessions/.claude-plugin/plugin.json
 ```
 
 Skills are iterated with Anthropic's `skill-creator` plugin: each skill keeps its test
@@ -71,35 +72,42 @@ entries are added, removed, or the catalog is renamed.
 These apply to plugins under `plugins/`, not to github-sourced products. They are promised
 in the top-level README, so a new hosted plugin that breaks one needs the README changed too.
 
-- **Two skills per plugin.** A `brain-dump` skill (teacher: menu-driven, re-runnable,
-  `allowed-tools: Read`, never runs the worker or touches files on the user's behalf) and
-  a worker skill whose `description` is a long list of plain-language trigger phrases so
-  Claude reaches for it without the slash command. Every plugin reuses the name
-  `brain-dump`; namespacing by plugin avoids conflicts.
+- **A brain-dump plus one worker skill per deliverable.** A `brain-dump` skill (teacher:
+  menu-driven, re-runnable, `allowed-tools: Read`, never runs the workers or touches files
+  on the user's behalf) and one or more worker skills whose `description` is a long list of
+  plain-language trigger phrases so Claude reaches for it without the slash command. Every
+  plugin reuses the name `brain-dump`; namespacing by plugin avoids conflicts. The rule for
+  adding a worker: a new skill when the deliverable or workflow differs (a listing versus a
+  written file versus a cleanup that deletes); a new flag on the shared script when it is
+  only a filter over the same output.
 - **Read-only, local-only by default.** Scripts read files and print. Anything that writes,
   changes settings, or sends data off the machine must be stated in that plugin's README and
-  ask first. (The session finder's `--copy` writes the clipboard and is documented as such.)
+  ask first. (claude-sessions' `copy` writes the clipboard and `dump --out` writes one named
+  file; both are documented as such, and the summarize skill asks for the location first.)
 - **Nothing copyable in a markdown table.** The terminal renderer truncates table cells, so
   session ids, paths and commands go in fenced code blocks on their own line. Skills that
   present results shortlist first, then show the chosen item as a block.
-- **Advise, never install.** Preflight (`--doctor`) and the skill text tell the user what to
+- **Advise, never install.** Preflight (`doctor`) and the skill text tell the user what to
   install per OS; no skill or script runs installers or package managers.
 - **Cross-platform means POSIX plus Windows branches.** `os.kill(pid, 0)` terminates the
   target on Windows; use `pid_alive()`. Quote shell commands through `shell_quote()` /
   `cd_then()`, which emit PowerShell syntax when `os.name == "nt"`. Windows is untested
   until CI covers it, so the README claims only macOS and Linux.
-- **Scripts are addressed relative to the skill directory.** SKILL.md refers to
-  `<skill-dir>/scripts/...`, the base directory Claude Code reports when the skill loads.
-  Never hardcode an install path.
+- **One shared script per plugin, addressed relative to the skill directory.** Scripts and
+  references live at the plugin root (`plugins/<name>/scripts/`, `plugins/<name>/references/`)
+  so every skill uses the same code. SKILL.md refers to `<skill-dir>/../../scripts/...`,
+  where `<skill-dir>` is the base directory Claude Code reports when the skill loads. Never
+  hardcode an install path.
 - **brain-dump tone rules** (see `skills/brain-dump/SKILL.md`): label every block as either
   *Prompt: type into Claude Code* or *Shell: run in your terminal*; use `<placeholders>`,
   never invented ids or paths; never tell the user to type `exit`/`quit`/`stop`, since those
   can end their Claude session.
 
-## claude-session-finder internals
+## claude-sessions internals
 
-`skills/find/scripts/find_sessions.py` is one file organised as data sources → collect →
-filter → output:
+`scripts/sessions.py` is one file organised as data sources → collect → filter → output,
+with argparse subcommands `list` (default when only flags are given; `main()` prepends it),
+`show`, `copy`, `dump` and `doctor`:
 
 - **Data sources** under `$CLAUDE_CONFIG_DIR` (default `~/.claude`): per-project transcripts
   `projects/<encoded-cwd>/<session-id>.jsonl` (primary), `history.jsonl` (cheapest source of
@@ -108,17 +116,25 @@ filter → output:
   `~/.claude.json` `projects.<cwd>` (`lastGracefulShutdown` drives the "not shut down
   cleanly" flag). The encoded directory name is never decoded; `cwd` is read from the records.
 - **`scan_transcript`** prefilters lines by `type` so unknown record types are ignored rather
-  than fatal. `--deep` is the only thing that reads assistant blocks, which is why it is slow.
-- **`collect_sessions` → `apply_filters` → `print_list` / `print_show` / `to_json`.**
-  Add a new flag in `main()`, filter it in `apply_filters`, and make sure `to_json` still
-  carries the field. `--show` and `--copy` short-circuit before filtering via `find_one`;
-  `--doctor` short-circuits before the session store is even required.
+  than fatal. `--deep` is the only thing that makes `list` read assistant blocks, which is why
+  it is slow; `show` always does.
+- **`collect_sessions` → `apply_filters` → `print_list` / `print_table` / `to_json`.**
+  Add a new `list` flag in `build_parser()`, filter it in `apply_filters`, and make sure
+  `to_json` still carries the field. `--here` compares `os.path.realpath` of the session's
+  cwd against the current directory (prefix match unless `--exact`).
+- **`read_turns` → `run_dump`** is the summarize path: a second, simpler transcript reader
+  that keeps real user prompts and the `text` + `tool_use` blocks of assistant records,
+  merges consecutive assistant records into one turn, renders each tool call as one line via
+  `tool_line()`, and masks credential-looking strings with `redact()` (`_SECRET_PATTERNS`;
+  the generic `key=value` pattern must not re-match an already inserted `[REDACTED` marker).
+  `--stats` sizes the dump and proposes `--start/--end` chunks of roughly 120K chars.
 - **Resume command selection** happens at the end of `collect_sessions`: the newest
   transcript per directory (by file mtime, which is what `claude --continue` keys on) gets
   the `--continue` form as `resume_command` and the id form as `resume_alt`; every session
   also carries `resume_by_id`.
 
 The transcript format is Claude Code internal and changes between versions.
-`skills/find/references/session-storage.md` is the authoritative map of files and record
-types (with the version it was verified against); update it whenever the script's parsing
-changes, because `find/SKILL.md` tells Claude to fall back to it when the script errors.
+`references/session-storage.md` is the authoritative map of files and record types (with
+the version it was verified against); update it whenever the script's parsing changes,
+because both `find/SKILL.md` and `summarize/SKILL.md` tell Claude to fall back to it when
+the script errors.

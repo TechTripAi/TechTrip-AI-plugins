@@ -19,13 +19,13 @@ Inside Claude Code:
 
 ```
 /plugin marketplace add TechTripAi/TechTrip-AI-plugins
-/plugin install claude-session-finder@TechTrip-AI-plugins
-/claude-session-finder:brain-dump
+/plugin install claude-sessions@TechTrip-AI-plugins
+/claude-sessions:brain-dump
 ```
 
 The first line registers the marketplace on your machine. The second installs one
 plugin at user scope, so it is available in every project. The third starts its tour.
-Then, in a new session, ask Claude to "check that the session finder can run on this
+Then, in a new session, ask Claude to "check that the session tools can run on this
 machine": the plugin's doctor confirms Python, Claude Code and the session store are in
 place and says what to install if not. It never installs anything for you.
 
@@ -33,7 +33,7 @@ place and says what to install if not. It never installs anything for you.
 
 | Plugin | What it does | Start here |
 |---|---|---|
-| [claude-session-finder](plugins/claude-session-finder/) | Find, search and resume past Claude Code sessions across every project on this machine: directory, session id, last active, the last thing you said, and the exact resume command. Flags sessions still running elsewhere so you do not fork them by accident. Hosted in this repository. | `/claude-session-finder:brain-dump` |
+| [claude-sessions](plugins/claude-sessions/) | Find, list, resume and summarize past Claude Code sessions across every project on this machine or just the current directory: directory, session id, status, last active, the last thing you said, and the exact resume command; plus a markdown write-up of any session with decisions, action items and open questions. Flags sessions still running elsewhere so you do not fork them by accident. Hosted in this repository. | `/claude-sessions:brain-dump` |
 | [techtrip-secondbrain](https://github.com/TechTripAi/techtrip-secondbrain) | One-command bootstrapper for a generic LLM Wiki second brain on a fresh Mac: Obsidian, the claude-obsidian companion, a clean vault, the Obsidian MCP server, source-fetch skills (YouTube, X, voice, code, NotebookLM), git sync and backup. Harness-agnostic skills with Claude Code, Cursor and Copilot templates. Own repository. | `/techtrip-secondbrain:brain-dump` |
 | [claude-obsidian](https://github.com/TechTripAi/claude-obsidian) | TechTrip AI's maintained fork of [AgriciDaniel's claude-obsidian](https://github.com/AgriciDaniel/claude-obsidian) (MIT), a self-organizing AI second brain for Obsidian + Claude Code. Maintained independently with changes that are not merged upstream; original credit and license retained. Installed for you by techtrip-secondbrain, or on its own from here. Own repository. | its README |
 
@@ -64,14 +64,15 @@ second brain, for example, is an installer by design.
 
 
 - **A `brain-dump` skill.** Menu-driven, re-runnable, teaches rather than does. Skills
-  are namespaced by plugin (`/claude-session-finder:brain-dump`), so every plugin can use
+  are namespaced by plugin (`/claude-sessions:brain-dump`), so every plugin can use
   the same name without conflict.
 - **A worker skill that also triggers on plain language.** You can invoke it by name or
   just ask; the description is written so Claude reaches for it when it fits.
 - **Standard-library scripts.** Bundled scripts run on the Python or shell that ships
   with macOS. No package installs to use a plugin.
 - **Read-only unless the README says otherwise.** A plugin that changes files, settings
-  or sessions says so up front and asks before doing it.
+  or sessions says so up front and asks before doing it. (claude-sessions writes the
+  clipboard on request and the one summary file you ask for, where you say.)
 - **Advise, never install.** A plugin checks for what it needs and tells you what to
   install for your OS. It does not run installers or package managers on your behalf.
 - **Nothing leaves the machine.** Plugins here read local files. Any exception is
@@ -86,7 +87,8 @@ plugins/<name>/
   .claude-plugin/plugin.json      that plugin's own name, version and metadata
   README.md                       what it does, how to install, how to use
   CHANGELOG.md                    per-plugin release notes
-  skills/<skill>/SKILL.md         invoked as /<plugin>:<skill>; scripts and references beside it
+  scripts/, references/           shared by every skill in the plugin
+  skills/<skill>/SKILL.md         invoked as /<plugin>:<skill>
 ```
 
 One repository, many plugins, each versioned on its own. This is the same layout
@@ -99,7 +101,7 @@ entries; the catalog entry's `version` is bumped when that product releases.
 Load a plugin for one session without installing it:
 
 ```
-claude --plugin-dir ./plugins/claude-session-finder
+claude --plugin-dir ./plugins/claude-sessions
 ```
 
 Edit, then `/reload-plugins` inside that session to pick up changes. Before a release,

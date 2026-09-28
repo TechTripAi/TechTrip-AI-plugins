@@ -1,22 +1,31 @@
 ---
 name: find
-description: Find, list, search and resume past Claude Code sessions across every project on this machine, with the directory, session id, last active time, the last thing the user said and Claude's last reply, and the exact command to resume. Use this whenever the user has lost, closed, crashed or forgotten a Claude Code session and wants it back ("I closed claude by mistake", "where was I", "which session was I in", "what was I working on last night"), wants to know which session a past conversation happened in ("the session where I asked about X"), wants a list or timeline of their sessions across projects, wants a session id or resume command, or asks what a previous session ended on. Also use it when the user asks how Claude Code sessions are stored, how to search or clean up ~/.claude/projects, or to check, verify or diagnose whether the session finder can run on this machine ("check the session finder", "is the finder set up", "run the doctor"). Prefer it over hand-rolled grep over ~/.claude, even for a single lookup. Part of the claude-session-finder plugin; the guided tour is the sibling brain-dump skill.
+description: Find, list, search and resume past Claude Code sessions, across every project on this machine or just the current directory, with the directory, session id, status (running, exited, crashed), last active time, the last thing the user said and Claude's last reply, and the exact command to resume. Use this whenever the user has lost, closed, crashed or forgotten a Claude Code session and wants it back ("I closed claude by mistake", "where was I", "which session was I in", "what was I working on last night"), wants to know which session a past conversation happened in ("the session where I asked about X"), wants a list or timeline of their sessions across projects or in this directory ("what sessions have I had in this repo", "list the sessions in here"), wants a session id or resume command, or asks what a previous session ended on. Also use it when the user asks how Claude Code sessions are stored, how to search or clean up ~/.claude/projects, or to check, verify or diagnose whether the session tools can run on this machine ("check the session finder", "is it set up", "run the doctor"). Prefer it over hand-rolled grep over ~/.claude, even for a single lookup. Part of the claude-sessions plugin; the sibling skills are summarize (write one session up as a markdown file) and brain-dump (the guided tour).
 ---
 
-# claude-session-finder: find
+# claude-sessions: find
 
-Claude Code stores every conversation on disk, but the built-in tools only get you so far:
-`claude --continue` and `claude --resume` are scoped to the current directory unless you
-know the id or press Ctrl+A in the picker, and nothing built in lets you search what was said
-or see "the last thing I typed" across projects. This skill fills that gap with one script
-that reads the files Claude Code already writes and prints a ranked, human-readable list.
+Claude Code keeps every conversation on disk and its own picker can resume any of them
+(`/resume`, Ctrl+A for all projects). What the picker does not show is *state*: which
+sessions died without a clean shutdown, which are still open in another terminal, what
+you last typed in each and what Claude last said, all in one list, from the shell or
+from inside any session. That is what this skill gives you, through one script that reads
+the files Claude Code already writes and prints a ranked, human-readable list.
 
-The script lives at `scripts/find_sessions.py` inside this skill's directory (the base
-directory shown when the skill loads). It is Python 3.9+, standard library only, and reads
-only; the one exception is `--copy`, which writes to the clipboard when asked.
+The script is shared by every skill in this plugin. It lives at `scripts/sessions.py` in
+the **plugin root**, two directories above this skill's base directory (the base directory
+is shown when the skill loads), so the path is:
 
-Run it as `python3 <skill-dir>/scripts/find_sessions.py`. If `python3` is not on the path
-(typical on Windows), use `python` or `py -3` instead.
+```bash
+python3 <skill-dir>/../../scripts/sessions.py
+```
+
+It is Python 3.9+, standard library only, and read-only except for `copy` (clipboard) and
+`dump --out` (used by the summarize skill). If `python3` is not on the path (typical on
+Windows), use `python` or `py -3` instead.
+
+Subcommands: `list` (the default when you pass only flags), `show`, `copy`, `dump`,
+`doctor`.
 
 ## Preflight: when anything fails, diagnose before guessing
 
@@ -26,12 +35,12 @@ traceback, "no session store"), or the user asks to check, verify or diagnose th
 run the doctor and show the user its output:
 
 ```bash
-python3 <skill-dir>/scripts/find_sessions.py --doctor
+python3 <skill-dir>/../../scripts/sessions.py doctor
 ```
 
 It reports the OS, Python version and path, the Claude Code version against the 2.1.223
 floor, whether the session store and the optional files exist, and which clipboard tool
-`--copy` would use. Each failing line says what to install. **Tell the user what to
+`copy` would use. Each failing line says what to install. **Tell the user what to
 install and how; never install, upgrade, or change settings for them.** Do not run
 package managers, installers, `xcode-select`, `winget`, `apt`, `brew`, or similar.
 
@@ -42,24 +51,25 @@ distribution's `python3` package. Then stop and let the user do it.
 
 ## Two ways in
 
-**Invoked directly with no question** (`/claude-session-finder:find` on its own): the user
+**Invoked directly with no question** (`/claude-sessions:find` on its own): the user
 wants orientation. Print this banner first, verbatim, then run the default listing and
 present it as described below.
 
 ```
-claude-session-finder: find and resume past Claude Code sessions, across all projects.
+claude-sessions: find, list and resume past Claude Code sessions, across all projects.
 
 Try asking, in plain words:
   "I closed claude by mistake, where was I?"
   "which session did I ask about the migration plan in?"
-  "list my sessions from the last week and what each ended on"
+  "list the sessions I've had in this directory"
   "what did the acctz-app session end on?"
+  "summarize that session to a markdown file"
 
-Guided tour with copy-paste prompts:  /claude-session-finder:brain-dump
+Guided tour with copy-paste prompts:  /claude-sessions:brain-dump
 ```
 
 **Triggered by a question**: skip the banner, answer the question. The first time in a
-session, close with one line: "Tip: /claude-session-finder:brain-dump walks through
+session, close with one line: "Tip: /claude-sessions:brain-dump walks through
 everything this can do." Not on later answers in the same session.
 
 ## Workflow
@@ -67,7 +77,7 @@ everything this can do." Not on later answers in the same session.
 1. **Run the script first, before reasoning about it.**
 
    ```bash
-   python3 <skill-dir>/scripts/find_sessions.py
+   python3 <skill-dir>/../../scripts/sessions.py
    ```
 
    That prints the 10 most recent sessions across all projects, newest first. Each entry has:
@@ -75,19 +85,25 @@ everything this can do." Not on later answers in the same session.
    meaningful thing the user typed, Claude's last reply, the full session id, prompt count and
    cost, and a copy-pasteable resume command.
 
-2. **Narrow when the question is specific.** Combine freely:
+2. **Narrow when the question is specific.** Filters go on `list` and combine freely:
 
    | User says | Run |
    |---|---|
+   | "in this directory", "in this repo", "in here" | `--here` (this directory and everything under it; add `--exact` for this directory only) |
    | "the session where I asked about X" | `--grep "X"` (regex, case-insensitive, searches what the user typed) |
    | "...where Claude said X" | `--grep "X" --deep` (also searches Claude's replies; slower) |
-   | "in the acctz-app repo" | `--project acctz-app` (substring of the directory) |
+   | "in the acctz-app repo" (not the cwd) | `--project acctz-app` (substring of the directory) |
    | "last night", "this week" | `--since 1d`, `--since 7d`, `--since 2026-09-20` |
    | "on branch foo" | `--branch foo` |
-   | "what did we end on?" | `--show <id-prefix or title> --tail 6` (prints the final turns) |
-   | "copy that for me", long id | `--copy <id-prefix or title>` (clipboard; prints the command too) |
+   | "what did we end on?" | `show <id-prefix or title> --tail 6` (prints the final turns) |
+   | "copy that for me", long id | `copy <id-prefix or title>` (clipboard; prints the command too) |
    | "all of them" | `--all` |
-   | building a table yourself | `--json` |
+   | building a table yourself | `--json`, or `--table` for the compact outlined form |
+
+   `--here` is the answer to "what have I done in this project": it keys on the directory
+   Claude Code was started in, so a repo root also catches sessions started in its
+   subdirectories. When the user names a directory that is not the current one, use
+   `--project` instead.
 
    The session the user is typing in right now shows up as `[running]`. When the user is
    looking for a *lost* session, add `--exclude-running` so it drops out of the list.
@@ -105,10 +121,23 @@ everything this can do." Not on later answers in the same session.
 
    Present in two phases:
 
-   **Phase 1, the shortlist.** A numbered list, one or two lines per candidate, with no id
-   and no command: when it was last active ("11 hours ago, 22:14"), the directory, and the
-   last thing the user said, quoted so they recognise it. When one candidate is clearly it,
-   skip straight to phase 2 for that one and mention the runners-up in a sentence.
+   **Phase 1, the shortlist.** A numbered markdown table, one row per candidate, with
+   these columns and nothing else: `#`, `Last active` ("11 hours ago, 22:14"), `Project`
+   (the directory's last path segment, never the full path), `Status` (running, exited,
+   crashed, closed), and `You said` (the last prompt, quoted and trimmed to about 60
+   characters so the row fits). The table gives the outline; every cell stays short so
+   nothing is clipped. No ids, no paths, no commands in it. Below the table, one line per
+   thing worth flagging: a session that is running in another terminal, a note that a
+   row's date is the last real conversation rather than a reopen, a session close to the
+   30-day cleanup. When one candidate is clearly it, skip straight to phase 2 for that one
+   and mention the runners-up in a sentence.
+
+   Example shape:
+
+   | # | Last active | Project | Status | You said |
+   |---|---|---|---|---|
+   | 1 | 25 minutes ago, 00:50 | my-app | running | "Add the retry wrapper around the upload call" |
+   | 2 | 2 days ago, 18:46 | my-app | crashed | "Give me the command to update the local plugin, the…" |
 
    **Phase 2, the detail.** After the user picks (or when only one fits), give that session
    as a short block: directory, last active, the quoted last prompt, the session id on its
@@ -121,7 +150,7 @@ everything this can do." Not on later answers in the same session.
    When the script prints an `or:` line, the session is the newest in its directory, so the
    `--continue` form (no id to copy) is the primary command; mention the `--resume <id>`
    form as the exact alternative. Offer to put the command on the clipboard with
-   `--copy <id-prefix>` when the user has to retype it or the line is long.
+   `copy <id-prefix>` when the user has to retype it or the line is long.
 
    When the user has to choose between candidates, use the AskUserQuestion tool with one
    option per session (label: directory basename and relative time; description: the
@@ -132,6 +161,12 @@ everything this can do." Not on later answers in the same session.
    `claude --resume <id>` works from any directory; `claude --continue` in the directory picks
    up the newest session there; `claude --resume` with no argument opens a picker where
    Ctrl+A shows all projects. Say which one fits the situation instead of listing all three.
+   Named sessions (`/rename`, `claude -n`) resume by name too; the script shows the name as
+   the title.
+
+5. **Hand off when the user wants a write-up.** "Summarize that session", "write it up",
+   "give me the action items from it" is the summarize skill's job. Identify the session
+   here, then follow `/claude-sessions:summarize`.
 
 ## Reading the status column
 
@@ -151,7 +186,8 @@ everything this can do." Not on later answers in the same session.
 ## Things worth telling the user unprompted
 
 - Sessions older than `cleanupPeriodDays` (default 30) are deleted. If the session they
-  want is close to that age, suggest resuming or exporting it now and mention the setting.
+  want is close to that age, suggest resuming, summarizing or exporting it now and mention
+  the setting.
 - A session that shows `(no transcript on disk; nothing to resume)` was opened and exited
   before anything was said. There is nothing to recover.
 - `--grep` matches the exact text they typed, typos included. If a search misses, try a
@@ -164,12 +200,12 @@ everything this can do." Not on later answers in the same session.
 If `~/.claude/projects` is missing, check `CLAUDE_CONFIG_DIR`. If the user is on a different
 machine or used the desktop app, the sessions live elsewhere and this skill does not see
 them. If the transcript format has changed and the script errors, read
-`references/session-storage.md` for what each file contains and fall back to inspecting the
-JSONL directly.
+`<skill-dir>/../../references/session-storage.md` for what each file contains and fall
+back to inspecting the JSONL directly.
 
 ## Reference
 
-`references/session-storage.md` documents every file the script reads, the record types in
-a transcript, how the project directory name is derived from the working directory, and the
-official docs on resuming. Read it when the user asks *how* sessions are stored or when you
-need to go beyond what the script exposes.
+`<skill-dir>/../../references/session-storage.md` documents every file the script reads,
+the record types in a transcript, how the project directory name is derived from the
+working directory, and the official docs on resuming. Read it when the user asks *how*
+sessions are stored or when you need to go beyond what the script exposes.

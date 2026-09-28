@@ -1,0 +1,29 @@
+{
+  "skill_name": "summarize",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "summarize the story-1 session in acctz-app to a markdown file in this directory",
+      "expected_output": "Identifies the single session titled story-1 in the acctz-app directory and confirms it in one line. Runs the dump subcommand with --stats and then --out into the scratchpad, reads the dump, asks with AskUserQuestion where to write (current directory recommended, with the proposed filename shown) and which appendix to include, then writes a markdown file organised by discussion topic with Summary, Topics (each with what was discussed, decisions, state at the end), Action items, Open questions, Dangling threads, Files edited and the chosen transcript appendix. Reports the path in a code block on its own line with counts of topics, action items and open questions.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "what were the action items and open questions from the session where I asked about the migration plan?",
+      "expected_output": "Uses list --grep to find the session, confirms it, dumps it, and answers in chat with the action items and open questions drawn from the transcript, attributing each to a topic and marking anything that was proposed but not agreed. Offers to write the full summary to a file rather than writing one unasked.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "this session is about to get cleaned up, write it up so I don't lose it: /Users/trip/workspace-acctz session from three weeks ago",
+      "expected_output": "Finds the session in that directory from about three weeks ago, mentions the 30-day cleanupPeriodDays retention and that the summary becomes the durable copy, asks location and appendix via AskUserQuestion, writes the document with the condensed transcript appendix, and reports the path. Does not put the session id or resume command inside a markdown table other than the short id in the header table.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "summarize the session I'm in right now to a file",
+      "expected_output": "Resolves 'this session' to the one marked running in the current directory, notes that the summary covers turns completed so far, dumps it, asks location and appendix, writes the file and reports the path.",
+      "files": []
+    }
+  ]
+}
