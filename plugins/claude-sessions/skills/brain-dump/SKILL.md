@@ -74,8 +74,8 @@ Explain the chosen section, then invite another. If they want the whole thing, w
 
 **Explain:** This is the case the plugin was built for. You ask in plain words; Claude runs
 the finder, hides the session you are typing in, and shows the most recently active
-sessions in a short table with the directory, the last thing you typed, and whether each
-one exited cleanly, crashed, or is still running somewhere. Then it gives the resume
+sessions in a table with the full directory and session id, the last thing you typed,
+and whether each one exited cleanly, crashed, or is still running somewhere. Then it gives the resume
 command for the one you pick.
 
 **Prompt: type into Claude Code**
@@ -134,9 +134,10 @@ list my sessions in acctz-app from the last week, with the last thing I said in 
 show every claude session I had this month across all projects, newest first
 ```
 
-**Expect:** a numbered table: last active, project, status, the last thing you said. No
-ids yet; pick a row and Claude gives its id and resume command in a code block. (Ids never
-go in a table, because the terminal clips table cells.) Sessions that started before the
+**Expect:** a numbered table: last active, status, the full session id, the full
+directory, the last thing you said. Ids and paths are never shortened, so you can copy
+them straight from the row; pick a row and Claude gives its resume command in a code
+block. Sessions that started before the
 window but were active inside it are included, and Claude says so.
 
 ---
@@ -188,7 +189,9 @@ summary, then for each topic what was discussed, what was decided and where it e
 then action items, open questions, threads that were started and dropped, the files that
 were edited, and a condensed transcript at the back. Before writing it asks where the file
 goes (the current directory by default) and whether you want the transcript appendix.
-Anything that looks like a pasted credential is masked before Claude ever reads it.
+Things that look like pasted credentials (API keys, tokens, passwords in `.env` or JSON
+form) are masked before Claude reads the transcript. The masking is pattern-based, so it
+can miss an unusual format; Claude is told to flag anything that slipped through.
 
 **Prompt: type into Claude Code**
 ```
@@ -298,8 +301,9 @@ output. Names are per repository for `--resume <name>`; ids work everywhere.
 - **Contents.** Transcripts hold everything you pasted into a prompt, including anything
   sensitive. They never leave the machine on their own, but treat `~/.claude/projects`
   like a private notebook. When you ask for a quote, ask for the line you need rather than
-  the whole exchange. The summarize skill masks anything that looks like a key or password
-  before Claude reads the transcript, and tells you if something slipped through.
+  the whole exchange. The summarize skill masks what looks like a key or password before
+  Claude reads the transcript and flags anything it notices slipped through, but the
+  masking is pattern-based: check a summary before you share it.
 
 **Prompt: type into Claude Code**
 ```
@@ -326,7 +330,7 @@ Cheat sheet:
 |---|---|
 | (none) | 10 most recent sessions, all projects |
 | `list --here` | sessions in this directory and below (`--exact` for this directory only) |
-| `list --table` | compact outlined table, one row per session |
+| `list --table` | outlined table, one row per session, full ids and directories |
 | `list --all` / `--limit N` | more or fewer |
 | `list --project <substr>` | directory contains this |
 | `list --since 2d` / `7d` / `2026-09-01` | activity window |
@@ -334,11 +338,13 @@ Cheat sheet:
 | `list --running` / `--exclude-running` | live sessions only, or hide them |
 | `list --branch <name>` | git branch filter |
 | `list --json` | machine-readable, for jq or scripts |
-| `show <id-prefix> --tail 6` | final turns of one session |
-| `dump <id-prefix> --out <file>` | clean, numbered transcript with credentials masked (what summarize reads) |
-| `dump <id-prefix> --stats` | how big a dump would be, with chunk ranges for big sessions |
-| `copy <id-prefix>` | put that session's resume command on the clipboard |
+| `show <id> --tail 6` | final turns of one session |
+| `dump <id> --out <file>` | clean, numbered transcript with credentials masked (what summarize reads) |
+| `dump <id> --stats` | how big a dump would be, with part ranges for big sessions |
+| `copy <id>` | put that session's resume command on the clipboard |
 | `doctor` | check Python, Claude Code, the session store and clipboard; says what to install, installs nothing |
+
+`<id>` is the session id as the finder prints it; any unique prefix of it also works as input.
 
 It reads `~/.claude/projects`, `~/.claude/history.jsonl`, `~/.claude/sessions` and
 `~/.claude.json`. Set `CLAUDE_CONFIG_DIR` if yours lives elsewhere. The only things it

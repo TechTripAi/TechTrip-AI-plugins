@@ -84,9 +84,11 @@ in the top-level README, so a new hosted plugin that breaks one needs the README
   changes settings, or sends data off the machine must be stated in that plugin's README and
   ask first. (claude-sessions' `copy` writes the clipboard and `dump --out` writes one named
   file; both are documented as such, and the summarize skill asks for the location first.)
-- **Nothing copyable in a markdown table.** The terminal renderer truncates table cells, so
-  session ids, paths and commands go in fenced code blocks on their own line. Skills that
-  present results shortlist first, then show the chosen item as a block.
+- **Copyable values are always complete.** Session ids, paths, URLs and commands are
+  printed in full wherever they appear, tables included: never trimmed with `…`, never cut
+  to an id prefix or a directory basename. A clipped value looks copyable and fails when
+  pasted. Only descriptive text (prompts, replies, titles) may be trimmed, marked with `…`.
+  In the script, `one_line()` is for descriptive text only; never pass it a copyable value.
 - **Advise, never install.** Preflight (`doctor`) and the skill text tell the user what to
   install per OS; no skill or script runs installers or package managers.
 - **Cross-platform means POSIX plus Windows branches.** `os.kill(pid, 0)` terminates the
@@ -120,14 +122,19 @@ with argparse subcommands `list` (default when only flags are given; `main()` pr
   it is slow; `show` always does.
 - **`collect_sessions` → `apply_filters` → `print_list` / `print_table` / `to_json`.**
   Add a new `list` flag in `build_parser()`, filter it in `apply_filters`, and make sure
-  `to_json` still carries the field. `--here` compares `os.path.realpath` of the session's
+  `to_json` still carries the field. `--here` compares `normcase(realpath())` of the session's
   cwd against the current directory (prefix match unless `--exact`).
 - **`read_turns` → `run_dump`** is the summarize path: a second, simpler transcript reader
   that keeps real user prompts and the `text` + `tool_use` blocks of assistant records,
-  merges consecutive assistant records into one turn, renders each tool call as one line via
-  `tool_line()`, and masks credential-looking strings with `redact()` (`_SECRET_PATTERNS`;
-  the generic `key=value` pattern must not re-match an already inserted `[REDACTED` marker).
-  `--stats` sizes the dump and proposes `--start/--end` chunks of roughly 120K chars.
+  merges consecutive assistant records into one turn, and renders each tool call as one line
+  via `tool_desc()` / `format_tool()` (paths and URLs in full, other descriptions trimmed).
+  Non-human user records (`origin.kind` other than `human`, e.g. task notifications) become
+  a `background task` note in Claude's turn; `[Request interrupted` closes the turn.
+  `redact()` masks credential-looking strings (`_SECRET_PATTERNS`; the key=value patterns
+  allow any prefix such as `DATABASE_PASSWORD`, and must not re-match an inserted
+  `[REDACTED` marker). Redaction runs before any trimming so a key is never cut in half.
+  `--stats` proposes `--start/--end` parts of about `DUMP_PART_CHARS` (60K chars), sized so
+  the summarize skill can read each part with one Read call.
 - **Resume command selection** happens at the end of `collect_sessions`: the newest
   transcript per directory (by file mtime, which is what `claude --continue` keys on) gets
   the `--continue` form as `resume_command` and the id form as `resume_alt`; every session

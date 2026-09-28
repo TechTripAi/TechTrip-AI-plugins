@@ -98,7 +98,7 @@ everything this can do." Not on later answers in the same session.
    | "what did we end on?" | `show <id-prefix or title> --tail 6` (prints the final turns) |
    | "copy that for me", long id | `copy <id-prefix or title>` (clipboard; prints the command too) |
    | "all of them" | `--all` |
-   | building a table yourself | `--json`, or `--table` for the compact outlined form |
+   | building a table yourself | `--json`, or `--table` for the outlined form with full ids and paths |
 
    `--here` is the answer to "what have I done in this project": it keys on the directory
    Claude Code was started in, so a repo root also catches sessions started in its
@@ -113,31 +113,33 @@ everything this can do." Not on later answers in the same session.
    Two or three candidates is usually right. Do not paste the raw script output unless the
    user asks for the list.
 
-   **Never put a session id, a path, or a resume command in a markdown table.** The
-   terminal renderer truncates table cells to fit the window width, and a 36-character id
-   plus a directory never fits, so the user ends up with a clipped id they cannot paste.
-   Fenced code blocks are not truncated and copy cleanly. Anything meant to be copied goes
-   in a code block on its own line.
+   **Copyable values are always complete.** A session id, a path, a URL or a command is
+   printed in full wherever it appears, in a table, a list or a code block. Never shorten
+   one with `…`, never cut an id to a prefix, never reduce a directory to its last segment
+   when the user may need to use it. A clipped value looks copyable and fails when pasted,
+   which is worse than not showing it. Only descriptive text (what the user said, Claude's
+   reply, a title) may be trimmed, and it is marked with `…` when it is.
 
    Present in two phases:
 
    **Phase 1, the shortlist.** A numbered markdown table, one row per candidate, with
-   these columns and nothing else: `#`, `Last active` ("11 hours ago, 22:14"), `Project`
-   (the directory's last path segment, never the full path), `Status` (running, exited,
-   crashed, closed), and `You said` (the last prompt, quoted and trimmed to about 60
-   characters so the row fits). The table gives the outline; every cell stays short so
-   nothing is clipped. No ids, no paths, no commands in it. Below the table, one line per
+   these columns: `#`, `Last active` ("11 hours ago, 22:14"), `Status` (running, exited,
+   crashed, closed), `Session id` (the full 36-character id), `Directory` (the full path),
+   and `You said` (the last prompt, quoted, trimmed to about 50 characters). Put the id and
+   the directory in backticks so they copy as one piece. Below the table, one line per
    thing worth flagging: a session that is running in another terminal, a note that a
    row's date is the last real conversation rather than a reopen, a session close to the
    30-day cleanup. When one candidate is clearly it, skip straight to phase 2 for that one
-   and mention the runners-up in a sentence.
+   and mention the runners-up in a sentence. `list --table` prints the same shape.
 
    Example shape:
 
-   | # | Last active | Project | Status | You said |
-   |---|---|---|---|---|
-   | 1 | 25 minutes ago, 00:50 | my-app | running | "Add the retry wrapper around the upload call" |
-   | 2 | 2 days ago, 18:46 | my-app | crashed | "Give me the command to update the local plugin, the…" |
+   | # | Last active | Status | Session id | Directory | You said |
+   |---|---|---|---|---|---|
+   | 1 | 25 minutes ago, 00:50 | running | `3f2a9c1e-7b4d-4e8a-9c2f-1d5e6a7b8c9d` | `/Users/me/code/my-app` | "Add the retry wrapper around the upload call" |
+   | 2 | 2 days ago, 18:46 | crashed | `a81c0f3d-2e5b-4c7a-8d9e-0f1a2b3c4d5e` | `/Users/me/code/my-app` | "Give me the command to update the local plugin, t…" |
+
+   (The ids and paths above are illustrations of the shape; always use the script's real values.)
 
    **Phase 2, the detail.** After the user picks (or when only one fits), give that session
    as a short block: directory, last active, the quoted last prompt, the session id on its
@@ -148,13 +150,13 @@ everything this can do." Not on later answers in the same session.
    ```
 
    When the script prints an `or:` line, the session is the newest in its directory, so the
-   `--continue` form (no id to copy) is the primary command; mention the `--resume <id>`
-   form as the exact alternative. Offer to put the command on the clipboard with
-   `copy <id-prefix>` when the user has to retype it or the line is long.
+   `--continue` form (no id to copy) is the primary command; give the full `--resume <id>`
+   command as the exact alternative. Offer to put the command on the clipboard with
+   `copy <id>` when the line is long.
 
    When the user has to choose between candidates, use the AskUserQuestion tool with one
-   option per session (label: directory basename and relative time; description: the
-   quoted last prompt). It renders as a keypress picker instead of a table. Fall back to
+   option per session (label: directory name and relative time; description: the full
+   directory, the full session id and the quoted last prompt). It renders as a keypress picker instead of a table. Fall back to
    asking in prose if that tool is unavailable.
 
 4. **Explain the resume options briefly** when the user did not already know them:

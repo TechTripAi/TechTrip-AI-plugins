@@ -64,14 +64,15 @@ use `py -3` instead of `python3`.
 | Just ask | "where was I yesterday in the acctz-app repo?" triggers the finder on its own |
 | Sessions in the current directory | "list the sessions I've had in here" |
 | A session written up as markdown | "summarize that session to a file", or `/claude-sessions:summarize` |
-| The resume command on your clipboard | "copy the resume command for that one", or `copy <id-prefix>` from a terminal |
+| The resume command on your clipboard | "copy the resume command for that one", or `copy <id>` from a terminal |
 | Run the script yourself | `python3 <plugin>/scripts/sessions.py --help` |
 | Check the machine can run it | "check that the session tools can run here", or `doctor` from a terminal (see First run) |
 
 ## Skills
 
-- `find`: locate sessions. Runs the bundled script and presents a shortlist table, then the
-  chosen session's id and resume command in a code block.
+- `find`: locate sessions. Runs the bundled script and presents a shortlist table with the
+  full session id and directory in each row, then the chosen session's resume command in a
+  code block. Ids, paths and commands are never shortened.
 - `summarize`: write one session up as a markdown file. Asks where to put it (current
   directory by default) and whether to include the condensed transcript before writing.
 - `brain-dump`: the teacher. A menu-driven tour that hands you the exact prompts to type. It

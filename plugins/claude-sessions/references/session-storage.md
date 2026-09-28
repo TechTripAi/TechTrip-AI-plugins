@@ -1,6 +1,6 @@
 # Where Claude Code keeps sessions
 
-Verified against Claude Code 2.1.280 on macOS, September 2026. The transcript format is
+Verified against Claude Code 2.1.283 on macOS, September 2026. The transcript format is
 internal and can change between versions; the script prefilters lines by type so unknown
 record types are ignored rather than fatal.
 
@@ -32,10 +32,11 @@ never decodes this; it reads `cwd` from the records instead, which is exact.
 
 | `type` | Notes |
 |---|---|
-| `user` | A turn from the user **or** a tool result fed back to the model. Real prompts have `message.content` as a string or text blocks, no `toolUseResult`, and `isMeta` false. Slash commands arrive as `<command-name>/foo</command-name>`. `isSidechain: true` marks subagent traffic in older layouts. |
+| `user` | A turn from the user **or** a tool result fed back to the model. Real prompts have `message.content` as a string or text blocks, no `toolUseResult`, and `isMeta` false. Slash commands and skills arrive as `<command-message>…</command-message>` then `<command-name>/foo</command-name>` and `<command-args>…</command-args>`. `origin.kind` is `human` for typed prompts; `task-notification` (with `promptSource: "system"`, content `<task-notification>…<summary>…</summary>`) marks a background agent reporting back, not the user. `[Request interrupted by user]` marks an interruption. `isSidechain: true` marks subagent traffic in older layouts. |
 | `assistant` | Model output. `message.content` is a list of `text`, `tool_use` and `thinking` blocks. Carries `requestId`, `effort`, `attributionSkill`. |
 | `system` | Local command runs, compaction notices, etc. Carries `cwd`, `gitBranch`, `version`. |
 | `custom-title` | Set by `/rename` or `claude -n`. Last one wins. |
+| `ai-title` | Title Claude Code generates (`aiTitle`) from the opening topic, no timestamp. Rewritten many times per session but unchanged in practice (verified on 2.1.283); last one wins; used when there is no `custom-title`. |
 | `agent-name` | Derived display name (e.g. `my-app-3f`). Not a resume handle. |
 | `summary` | AI-generated title, when present. |
 | `cost-state` | Running totals: `totalCostUSD`, `totalDuration`, `modelUsage`. |

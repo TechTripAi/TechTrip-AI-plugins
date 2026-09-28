@@ -73,6 +73,9 @@ second brain, for example, is an installer by design.
 - **Read-only unless the README says otherwise.** A plugin that changes files, settings
   or sessions says so up front and asks before doing it. (claude-sessions writes the
   clipboard on request and the one summary file you ask for, where you say.)
+- **Complete values.** Session ids, paths and commands are always printed in full, in
+  tables too, so whatever you copy works when you paste it. Only descriptive text is
+  trimmed.
 - **Advise, never install.** A plugin checks for what it needs and tells you what to
   install for your OS. It does not run installers or package managers on your behalf.
 - **Nothing leaves the machine.** Plugins here read local files. Any exception is
