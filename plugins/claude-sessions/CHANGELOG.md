@@ -31,6 +31,9 @@
   Basic auth, URL credentials, private keys, and `NAME=value` / `"name": "value"` pairs for
   password, secret, token and key names with any prefix (`DATABASE_PASSWORD=...`).
   Redaction runs before trimming and covers the header.
+- **Masking everywhere.** `list` (text, `--table`, `--json`, `--grep` matches) and `show`
+  mask the same credential patterns as `dump`; `--no-redact` on `list`, `show` and `dump`
+  prints text as typed. `--grep` searches the masked text.
 - **Complete values everywhere.** Session ids, paths and commands are never trimmed or
   cut to a prefix, in the script's output or in what the skills present.
 - **Titles** fall back to Claude Code's `ai-title` when a session has no `/rename` title.

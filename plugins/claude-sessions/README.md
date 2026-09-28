@@ -96,11 +96,16 @@ It writes two things, both only when asked:
   read. The summary document itself is written by Claude to the location you choose when
   it asks.
 
-Before a transcript is dumped, anything that looks like a credential (API keys, GitHub and
-Slack tokens, AWS key ids, JWTs, bearer headers, passwords in URLs or `key=value` lines,
-private key blocks) is masked with `[REDACTED ...]`. The pattern list is deliberately
-broad; a false positive costs a few characters of a summary. The summarize skill is told
-to flag anything that slips through rather than copy it.
+Everything the script prints (the listing, the table, `--json`, `--grep` matches, `show`
+and `dump`) has anything that looks like a credential masked with `[REDACTED ...]`: API
+keys (Anthropic, OpenAI, Stripe, Google, GitHub, npm, Slack, AWS key ids), JWTs, Bearer
+and Basic auth headers, passwords in URLs, private key blocks, and `NAME=value` or
+`"name": "value"` pairs for password, secret, token and key names with any prefix
+(`DATABASE_PASSWORD=...`). The pattern list is deliberately broad; a false positive costs
+a few characters. It is still pattern-based and can miss an unusual format, so check a
+summary before you share it; the summarize skill is told to flag anything that slips
+through rather than copy it. `--no-redact` on `list`, `show` or `dump` prints the text as
+typed. `--grep` searches the masked text, so search by a variable name, not by a secret.
 
 ## Requirements
 

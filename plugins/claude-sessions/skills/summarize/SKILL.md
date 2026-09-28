@@ -58,7 +58,8 @@ The dump has a header (title, directory, branch, dates, status, size, resume com
 the full path of every file edited, one per line, and the redaction count) and then numbered turns: `### N. [time] you` or
 `### N. [time] claude`, with one `tool:` line per tool call and Claude's text. Tool
 output, thinking and subagent traffic are not in it. Anything that looks like a credential
-is already masked with `[REDACTED ...]`; keep those markers as they are.
+is already masked with `[REDACTED ...]`; keep those markers as they are, and never
+rerun the dump with `--no-redact` unless the user explicitly asks for the raw text.
 
 Read the scratch file with the Read tool. For a session split into parts, read the parts
 in order and keep running notes per part (topics seen, decisions, open items) before
