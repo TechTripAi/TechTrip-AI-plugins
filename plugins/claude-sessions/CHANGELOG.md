@@ -8,22 +8,39 @@
 - **New skill `summarize`**: writes one session up as a markdown file organised by
   discussion topic, with summary, decisions, action items, open questions, dangling
   threads, files edited and a condensed transcript. Asks where to write (current directory
-  by default) and which appendix to include before writing anything.
+  by default) and which appendix to include, unless the request already said; without
+  anyone to ask (`claude -p`) it uses those defaults and never overwrites. The document
+  records the full `--resume <id>` command, which stays valid when newer sessions start
+  in that directory.
 - **Script moved and restructured.** `scripts/sessions.py` at the plugin root is shared by
   every skill (was `skills/find/scripts/find_sessions.py`). Flags became subcommands:
   `list` (default when only flags are given), `show <id>`, `copy <id>`, `dump <id>`,
   `doctor`. `references/session-storage.md` moved to the plugin root too.
 - **`list --here`**: sessions started in the current directory and below; `--exact` for
   the directory alone. The `find` skill now answers "what have I done in this repo".
-- **`list --table`**: compact outlined table, one row per session, with the short ids
-  listed underneath rather than in the table.
+- **`list --table`**: outlined table, one row per session, with the full session id and
+  directory in every row.
 - **`dump <id>`**: clean, numbered transcript (your prompts, Claude's text, one line per
-  tool call; no tool output, thinking or subagent traffic). `--out FILE`, `--start/--end`
-  for chunks, `--max-chars`, `--no-tools`, `--stats` for size and suggested chunk ranges.
-  Anything that looks like a credential is masked unless `--no-redact`.
-- **`find` skill**: the shortlist is now a numbered markdown table (last active, project,
-  status, what you said) with short cells; ids, paths and commands still never go in a
-  table. The intro no longer claims the built-in picker cannot search content or reach
+  tool call; no tool output, thinking or subagent traffic). Slash commands and skill
+  invocations appear as typed; background task notifications become a note in Claude's
+  turn; an interruption ends the turn. The header lists every edited file by full path and
+  gives the `--resume <id>` command. `--out FILE`, `--start/--end`, `--max-chars`,
+  `--no-tools`, `--stats` for size and, for big sessions, part ranges small enough to read
+  in one go. Anything that looks like a credential is masked unless `--no-redact`: API keys
+  (Anthropic, OpenAI, Stripe, Google, GitHub, npm, AWS key ids, Slack), JWTs, Bearer and
+  Basic auth, URL credentials, private keys, and `NAME=value` / `"name": "value"` pairs for
+  password, secret, token and key names with any prefix (`DATABASE_PASSWORD=...`).
+  Redaction runs before trimming and covers the header.
+- **Complete values everywhere.** Session ids, paths and commands are never trimmed or
+  cut to a prefix, in the script's output or in what the skills present.
+- **Titles** fall back to Claude Code's `ai-title` when a session has no `/rename` title.
+  The summarize skill suggests a `/rename` title when the generated one (from the opening topic)
+  does not match what the session was mostly about.
+- **Undescribed Bash calls** in the dump show the command's whole first line plus a
+  `(+N more lines not shown)` marker, never a cut-off command.
+- **Background task notifications** no longer count as prompts you typed.
+- **`find` skill**: the shortlist is now a numbered markdown table (last active, status,
+  full session id, full directory, what you said); only the "you said" text is trimmed. The intro no longer claims the built-in picker cannot search content or reach
   other projects, since it can; the pitch is state and the last exchange at a glance.
 - **brain-dump**: sections for "sessions in this directory" and "summarize it to a file";
   cheat sheet uses the subcommands.

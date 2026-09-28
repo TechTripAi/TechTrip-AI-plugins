@@ -161,7 +161,10 @@ def clean_prompt(text: str) -> Optional[str]:
     text = text.strip()
     if not text:
         return None
-    if text.startswith("<command-name>"):
+    if text.startswith("<task-notification>"):
+        return None
+    # Slash commands and skills: "<command-message>" usually comes first, then "<command-name>".
+    if text.startswith("<command-") and "<command-name>" in text:
         name = _CMD_RE.search(text)
         args = _ARGS_RE.search(text)
         if not name:
@@ -196,8 +199,28 @@ def message_text(msg: Any) -> str:
 
 
 def one_line(text: str, width: int) -> str:
+    """Collapse whitespace and trim to width. For descriptive text only: never pass it an id,
+    a path or a command, because a trimmed one cannot be copied and used."""
     text = " ".join(text.split())
     return text if len(text) <= width else text[: width - 1] + "…"
+
+
+def is_human(record: Dict[str, Any]) -> bool:
+    """False for user records Claude Code injected (task notifications and other system turns).
+    Records from versions that predate the 'origin' field count as human."""
+    origin = record.get("origin")
+    return not (isinstance(origin, dict) and origin.get("kind") not in (None, "human"))
+
+
+_TASK_SUMMARY_RE = re.compile(r"<summary>(.*?)</summary>", re.S)
+
+
+def task_note(text: str) -> Optional[str]:
+    """'<task-notification>...' -> its one-line summary, e.g. 'Agent "Explore" finished'."""
+    if not text.lstrip().startswith("<task-notification>"):
+        return None
+    m = _TASK_SUMMARY_RE.search(text)
+    return " ".join(m.group(1).split()) if m else "background task reported back"
 
 
 # --------------------------------------------------------------------------- data sources
@@ -261,7 +284,7 @@ def scan_transcript(path: str, want_assistant: bool) -> Dict[str, Any]:
     """Stream one session transcript and pull out the metadata we care about."""
     info: Dict[str, Any] = {
         "cwd": None, "branch": None, "version": None, "first_ts": None, "last_ts": None,
-        "custom_title": None, "summary": None, "prompts": [], "last_assistant": None,
+        "custom_title": None, "ai_title": None, "summary": None, "prompts": [], "last_assistant": None,
         "cost_usd": None, "assistant_texts": [],
     }
     last_assistant_line: Optional[str] = None
@@ -278,7 +301,7 @@ def scan_transcript(path: str, want_assistant: bool) -> Dict[str, Any]:
                 else:
                     last_assistant_line = line
                     # still need the timestamp/branch; parse cheaply below
-            elif not any(k in line for k in ('"custom-title"', '"cost-state"', '"type":"summary"')):
+            elif not any(k in line for k in ('"custom-title"', '"ai-title"', '"cost-state"', '"type":"summary"')):
                 continue
             try:
                 d = json.loads(line)
@@ -297,12 +320,14 @@ def scan_transcript(path: str, want_assistant: bool) -> Dict[str, Any]:
                 info["version"] = d["version"]
             if t == "custom-title":
                 info["custom_title"] = d.get("customTitle")
+            elif t == "ai-title":
+                info["ai_title"] = d.get("aiTitle") or info["ai_title"]
             elif t == "summary":
                 info["summary"] = d.get("summary")
             elif t == "cost-state":
                 info["cost_usd"] = d.get("totalCostUSD")
             elif t == "user":
-                if d.get("isSidechain") or d.get("isMeta") or d.get("toolUseResult") is not None:
+                if d.get("isSidechain") or d.get("isMeta") or d.get("toolUseResult") is not None or not is_human(d):
                     continue
                 text = clean_prompt(message_text(d.get("message")))
                 if text:
@@ -353,6 +378,7 @@ def collect_sessions(cfg: str, deep: bool) -> List[Dict[str, Any]]:
             "branch": info["branch"],
             "version": info["version"],
             "custom_title": info["custom_title"],
+            "ai_title": info["ai_title"],
             "summary": info["summary"],
             "first_prompt": said[0][1] if said else None,
             "last_prompt": said[-1][1] if said else None,
@@ -377,7 +403,7 @@ def collect_sessions(cfg: str, deep: bool) -> List[Dict[str, Any]]:
         said = meaningful(prompts)
         sessions[sid] = {
             "session_id": sid, "transcript": None, "cwd": hist.get("project"), "branch": None, "version": None,
-            "custom_title": None, "summary": None,
+            "custom_title": None, "ai_title": None, "summary": None,
             "first_prompt": said[0][1] if said else None,
             "last_prompt": said[-1][1] if said else None,
             "last_prompt_at": said[-1][0] if said else None,
@@ -423,7 +449,7 @@ def collect_sessions(cfg: str, deep: bool) -> List[Dict[str, Any]]:
             s["status"] = "closed (you typed exit)"
         else:
             s["status"] = "closed"
-        s["title"] = s["custom_title"] or s["summary"] or (one_line(s["first_prompt"], 70) if s["first_prompt"] else "(untitled)")
+        s["title"] = s["custom_title"] or s["ai_title"] or s["summary"] or (one_line(s["first_prompt"], 70) if s["first_prompt"] else "(untitled)")
         s["newest_in_dir"] = bool(s["cwd"]) and newest_by_cwd.get(s["cwd"]) == sid
         s["resume_by_id"] = f"claude --resume {sid}"
         s["resume_alt"] = None
@@ -591,15 +617,17 @@ def apply_filters(sessions: List[Dict[str, Any]], args: argparse.Namespace) -> L
     if not args.include_empty:
         out = [s for s in out if s["has_transcript"] and s["prompt_count"] > 0]
     if args.here:
-        here = os.path.realpath(os.getcwd())
+        # realpath on both sides so symlinked checkouts match; normcase for Windows drive letters and case.
+        here = os.path.normcase(os.path.realpath(os.getcwd()))
+        prefix = here if here.endswith(os.sep) else here + os.sep  # "/" or "C:\" already ends in a separator
 
         def in_here(cwd: Optional[str]) -> bool:
             if not cwd:
                 return False
-            rp = os.path.realpath(cwd)
+            rp = os.path.normcase(os.path.realpath(cwd))
             if rp == here:
                 return True
-            return (not args.exact) and rp.startswith(here + os.sep)
+            return (not args.exact) and rp.startswith(prefix)
 
         out = [s for s in out if in_here(s["cwd"])]
     if args.project:
@@ -672,7 +700,9 @@ def print_list(sessions: List[Dict[str, Any]], args: argparse.Namespace) -> None
 
 
 def print_table(sessions: List[Dict[str, Any]], args: argparse.Namespace) -> None:
-    """Compact outlined table: one row per session, nothing copyable in it (ids come from 'show')."""
+    """Outlined table, one row per session. The id and directory are always printed in full,
+    however wide that makes the row, so they can be copied straight out of it; only the
+    'you said' text is trimmed."""
     if not sessions:
         print("No sessions matched. Try --include-empty, a wider --since, or drop --project/--here/--grep.")
         return
@@ -681,20 +711,20 @@ def print_table(sessions: List[Dict[str, Any]], args: argparse.Namespace) -> Non
     for i, s in enumerate(shown, 1):
         when = f"{humanize(s['last_prompt_at'] if s.get('reopened_only') else s['last_active'])}"
         stamp = local_stamp(s["last_prompt_at"] if s.get("reopened_only") else s["last_active"])
-        proj = os.path.basename(s["cwd"].rstrip("/\\")) if s["cwd"] else "?"
         rows.append([
             str(i),
             f"{when} ({stamp[5:]})",
-            proj or s["cwd"] or "?",
             short_status(s["status"]) + ("*" if s.get("reopened_only") else ""),
-            one_line(s["last_prompt"] or s["title"] or "", 60),
+            s["session_id"],
+            s["cwd"] or "?",
+            one_line(s["last_prompt"] or s["title"] or "", 50),
         ])
-    heads = ["#", "last active", "project", "status", "you said"]
+    heads = ["#", "last active", "status", "session id", "directory", "you said"]
+    # Every column is as wide as its longest cell; 'you said' was already trimmed above.
     widths = [max(len(h), *(len(r[c]) for r in rows)) for c, h in enumerate(heads)]
-    widths = [min(w, cap) for w, cap in zip(widths, (4, 30, 28, 9, 60))]
 
     def fmt(cells: List[str]) -> str:
-        return "| " + " | ".join(one_line(c, w).ljust(w) for c, w in zip(cells, widths)) + " |"
+        return "| " + " | ".join(c.ljust(w) for c, w in zip(cells, widths)) + " |"
 
     rule = "+" + "+".join("-" * (w + 2) for w in widths) + "+"
     scope = " in this directory" + ("" if args.exact else " and below") if args.here else ""
@@ -709,8 +739,7 @@ def print_table(sessions: List[Dict[str, Any]], args: argparse.Namespace) -> Non
         print("* only reopened and exited later; the date shown is the last real conversation")
     if len(sessions) > len(shown):
         print(f"({len(sessions) - len(shown)} more; raise --limit or narrow with --project/--since/--grep)")
-    print("\nRow number -> 'show <id-prefix>' for the id and resume command; ids are deliberately not in this table.")
-    print("ids in order: " + ", ".join(s["session_id"][:8] for s in shown))
+    print("\n'show <session id>' prints the resume command for a row; 'copy <session id>' puts it on the clipboard.")
 
 
 def print_show(sessions: List[Dict[str, Any]], prefix: str, tail: int) -> None:
@@ -759,17 +788,28 @@ def to_json(sessions: List[Dict[str, Any]], args: argparse.Namespace) -> None:
 
 # Patterns that look like credentials. Deliberately broad: a false positive costs a few
 # characters of a summary, a false negative copies a key into a file that may be shared.
+# Names such as DATABASE_PASSWORD or "client_secret" (JSON) are covered by the key=value
+# patterns at the end, which allow any prefix before the keyword and a quote after it.
+_SECRET_NAME = (r"[A-Za-z0-9_.-]*(?:api[_-]?key|secret[_-]?key|access[_-]?key|access[_-]?token|auth[_-]?token"
+                r"|client[_-]?secret|password|passwd|pwd|secret|token|credentials?)")
 _SECRET_PATTERNS: List[Tuple[re.Pattern, str]] = [
     (re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----", re.S), "[REDACTED private key]"),
     (re.compile(r"\bsk-(?:ant-)?[A-Za-z0-9_-]{16,}"), "[REDACTED api key]"),
+    (re.compile(r"\b[rs]k_(?:live|test)_[A-Za-z0-9]{16,}"), "[REDACTED stripe key]"),
     (re.compile(r"\b(?:ghp|gho|ghs|ghu|ghr)_[A-Za-z0-9]{20,}"), "[REDACTED github token]"),
     (re.compile(r"\bgithub_pat_[A-Za-z0-9_]{20,}"), "[REDACTED github token]"),
+    (re.compile(r"\bnpm_[A-Za-z0-9]{36}\b"), "[REDACTED npm token]"),
     (re.compile(r"\bAKIA[0-9A-Z]{16}\b"), "[REDACTED aws key id]"),
+    (re.compile(r"\bAIza[0-9A-Za-z_-]{35}"), "[REDACTED google api key]"),
     (re.compile(r"\bxox[baprs]-[A-Za-z0-9-]{10,}"), "[REDACTED slack token]"),
     (re.compile(r"\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}"), "[REDACTED jwt]"),
     (re.compile(r"(?i)\bbearer\s+[A-Za-z0-9._~+/=-]{16,}"), "Bearer [REDACTED]"),
+    (re.compile(r"(?i)\bbasic\s+[A-Za-z0-9+/]{12,}={0,2}"), "Basic [REDACTED]"),
     (re.compile(r"://([^/\s:@]+):([^@\s/]+)@"), "://[REDACTED]@"),
-    (re.compile(r"(?i)\b((?:api[_-]?key|secret[_-]?key|access[_-]?token|auth[_-]?token|client[_-]?secret|password|passwd|secret|token)\s*[=:]\s*[\"']?)([^\s\"'`,;\[]{8,})"), r"\1[REDACTED]"),
+    # KEY = "value with spaces" / "password": "..." ; then the unquoted KEY=value form. The
+    # unquoted value class excludes '[' so it never re-matches a marker inserted above.
+    (re.compile(r"(?i)(" + _SECRET_NAME + r"[\"']?\s*[=:]\s*)([\"'])([^\"'\n]{8,})\2"), r"\1\2[REDACTED]\2"),
+    (re.compile(r"(?i)(" + _SECRET_NAME + r"[\"']?\s*[=:]\s*)([^\s\"'`,;\[]{8,})"), r"\1[REDACTED]"),
 ]
 
 
@@ -782,15 +822,25 @@ def redact(text: str) -> Tuple[str, int]:
     return text, n
 
 
-def tool_line(name: str, inp: Any) -> str:
-    """One line describing a tool call, without its payload."""
+# Tool inputs whose value is a path or URL: always printed in full so it can be copied and used.
+_PATH_KEYS = {"Read": "file_path", "Edit": "file_path", "Write": "file_path", "MultiEdit": "file_path",
+              "NotebookEdit": "notebook_path", "WebFetch": "url"}
+_EDIT_TOOLS = ("Edit", "Write", "MultiEdit", "NotebookEdit")
+
+
+def tool_desc(name: str, inp: Any) -> Tuple[str, bool]:
+    """(what a tool call did, whether that is a path/URL that must never be trimmed). No payloads."""
     inp = inp if isinstance(inp, dict) else {}
+    if name in _PATH_KEYS:
+        return str(inp.get(_PATH_KEYS[name], "")), True
     if name == "Bash":
-        desc = inp.get("description") or inp.get("command", "")
-    elif name in ("Read", "Edit", "Write", "MultiEdit"):
-        desc = inp.get("file_path", "")
-    elif name == "NotebookEdit":
-        desc = inp.get("notebook_path", "")
+        if inp.get("description"):
+            return str(inp["description"]), False
+        # No description: the command's whole first line, never cut, and a marker for the
+        # rest, so a partial command can never pass for the complete one.
+        lines = str(inp.get("command", "")).strip().splitlines() or [""]
+        more = len(lines) - 1
+        return lines[0] + (f"  (+{more} more line{'s' if more != 1 else ''} not shown)" if more else ""), True
     elif name in ("Grep", "Glob"):
         desc = inp.get("pattern", "")
     elif name in ("Agent", "Task"):
@@ -799,23 +849,40 @@ def tool_line(name: str, inp: Any) -> str:
         desc = inp.get("skill", "")
     elif name == "AskUserQuestion":
         desc = "; ".join(q.get("question", "") for q in inp.get("questions", []) if isinstance(q, dict))
-    elif name in ("WebFetch", "WebSearch"):
-        desc = inp.get("url") or inp.get("query", "")
+    elif name == "WebSearch":
+        desc = inp.get("query", "")
     else:
         try:
             desc = json.dumps(inp)
         except (TypeError, ValueError):
             desc = ""
-    return f"[{name}] {one_line(str(desc), 110)}" if desc else f"[{name}]"
+    return str(desc), False
+
+
+def format_tool(tool: Dict[str, Any], redacting: bool) -> Tuple[str, int]:
+    """One dump line for a tool call. Redacts before trimming, so a key is never cut in half."""
+    desc, k = redact(tool["desc"]) if redacting else (tool["desc"], 0)
+    if not tool["full"]:
+        desc = one_line(desc, 110)
+    return (f"[{tool['name']}] {desc}" if desc else f"[{tool['name']}]"), k
 
 
 def read_turns(path: str) -> List[Dict[str, Any]]:
-    """The conversation as ordered turns: your prompts, Claude's text, and one line per tool call.
+    """The conversation as ordered turns: your prompts, Claude's text, and one entry per tool call.
 
     Tool results, thinking blocks, subagent traffic and UI records are dropped. Consecutive
     assistant records (text, then tool calls, then more text) are merged into one turn.
+    Background task notifications become a note inside Claude's turn, and an interruption
+    closes the turn so the reply after it starts a new one.
     """
     turns: List[Dict[str, Any]] = []
+
+    def claude_turn(ts: Optional[float]) -> Dict[str, Any]:
+        if turns and turns[-1]["who"] == "claude" and not turns[-1].get("closed"):
+            return turns[-1]
+        turns.append({"ts": ts, "who": "claude", "text": "", "tools": [], "files": [], "ts_end": ts})
+        return turns[-1]
+
     with open(path, encoding="utf-8", errors="replace") as fh:
         for line in fh:
             if not line.startswith("{"):
@@ -837,15 +904,27 @@ def read_turns(path: str) -> List[Dict[str, Any]]:
                 content = msg.get("content")
                 if isinstance(content, list) and any(isinstance(b, dict) and b.get("type") == "tool_result" for b in content):
                     continue
-                text = clean_prompt(message_text(msg))
+                raw = message_text(msg)
+                note = task_note(raw)
+                if note or not is_human(d):
+                    cur = claude_turn(ts)
+                    cur["tools"].append({"name": "background task", "desc": note or one_line(raw, 110), "full": False})
+                    continue
+                if raw.strip().startswith("[Request interrupted"):
+                    if turns and turns[-1]["who"] == "claude":
+                        turns[-1]["tools"].append({"name": "interrupted by you", "desc": "", "full": False})
+                        turns[-1]["closed"] = True
+                    continue
+                text = clean_prompt(raw)
                 if text:
-                    turns.append({"ts": ts, "who": "you", "text": text, "tools": []})
+                    turns.append({"ts": ts, "who": "you", "text": text, "tools": [], "files": []})
             elif t == "assistant":
                 content = msg.get("content")
                 texts: List[str] = []
-                tools: List[str] = []
-                if isinstance(content, str):
-                    texts.append(content)
+                tools: List[Dict[str, Any]] = []
+                files: List[str] = []
+                if isinstance(content, str) and content.strip():
+                    texts.append(content.strip())
                 elif isinstance(content, list):
                     for b in content:
                         if not isinstance(b, dict):
@@ -853,17 +932,19 @@ def read_turns(path: str) -> List[Dict[str, Any]]:
                         if b.get("type") == "text" and b.get("text", "").strip():
                             texts.append(b["text"].strip())
                         elif b.get("type") == "tool_use":
-                            tools.append(tool_line(str(b.get("name", "?")), b.get("input")))
+                            name = str(b.get("name", "?"))
+                            desc, full = tool_desc(name, b.get("input"))
+                            tools.append({"name": name, "desc": desc, "full": full})
+                            if name in _EDIT_TOOLS and desc:
+                                files.append(desc)
                 if not texts and not tools:
                     continue
-                if turns and turns[-1]["who"] == "claude":
-                    cur = turns[-1]
-                    if texts:
-                        cur["text"] = (cur["text"] + "\n\n" + "\n\n".join(texts)).strip()
-                    cur["tools"].extend(tools)
-                    cur["ts_end"] = ts
-                else:
-                    turns.append({"ts": ts, "who": "claude", "text": "\n\n".join(texts), "tools": tools, "ts_end": ts})
+                cur = claude_turn(ts)
+                if texts:
+                    cur["text"] = (cur["text"] + "\n\n" + "\n\n".join(texts)).strip()
+                cur["tools"].extend(tools)
+                cur["files"].extend(files)
+                cur["ts_end"] = ts
     return turns
 
 
@@ -875,55 +956,57 @@ def run_dump(sessions: List[Dict[str, Any]], args: argparse.Namespace) -> None:
     total = len(turns)
     first = max(1, args.start or 1)
     last = min(total, args.end) if args.end else total
+    if total and first > last:
+        sys.exit(f"--start {first} / --end {last}: nothing to show; this session has turns 1-{total}.")
     sel = turns[first - 1:last]
+    redacting = not args.no_redact
 
     files_touched: List[str] = []
     for tr in turns:
-        for tl in tr["tools"]:
-            if tl.startswith(("[Edit]", "[Write]", "[MultiEdit]", "[NotebookEdit]")):
-                p = tl.split("] ", 1)[1] if "] " in tl else ""
-                if p and p not in files_touched:
-                    files_touched.append(p)
+        for p in tr["files"]:
+            if p not in files_touched:
+                files_touched.append(p)
 
     redactions = 0
-    out: List[str] = []
-    out.append(f"# Session {s['session_id']}")
-    out.append(f"title:        {s['title']}")
-    out.append(f"dir:          {s['cwd'] or '?'}" + (f"   branch: {s['branch']}" if s["branch"] and s["branch"] != "HEAD" else ""))
-    out.append(f"started:      {local_stamp(s['started_at'])}   last active: {local_stamp(s['last_active'])}")
+    head: List[str] = []
+    head.append(f"# Session {s['session_id']}")
+    head.append(f"title:        {s['title']}")
+    head.append(f"dir:          {s['cwd'] or '?'}" + (f"   branch: {s['branch']}" if s["branch"] and s["branch"] != "HEAD" else ""))
+    head.append(f"started:      {local_stamp(s['started_at'])}   last active: {local_stamp(s['last_active'])}")
     if s.get("reopened_only"):
-        out.append(f"note:         last real conversation {local_stamp(s['last_prompt_at'])}; later activity was only reopening and exiting")
-    out.append(f"status:       {s['status']}")
+        head.append(f"note:         last real conversation {local_stamp(s['last_prompt_at'])}; later activity was only reopening and exiting")
+    head.append(f"status:       {s['status']}")
     extras = [f"{s['prompt_count']} prompts", f"{total} turns"]
     if s["subagent_count"]:
         extras.append(f"{s['subagent_count']} subagents")
     if s["cost_usd"]:
         extras.append(f"${s['cost_usd']:.2f}")
-    out.append(f"size:         {', '.join(extras)}, transcript {s['size_bytes'] // 1024} KB")
-    out.append(f"resume:       {s['resume_command']}")
+    head.append(f"size:         {', '.join(extras)}, transcript {s['size_bytes'] // 1024} KB")
+    head.append(f"resume:       {s['resume_command']}")
     if s.get("resume_alt"):
-        out.append(f"or:           {s['resume_alt']}")
+        head.append(f"or:           {s['resume_alt']}")
+    head.append(f"by id:        {cd_then(s['cwd'], s['resume_by_id']) if s['cwd'] else s['resume_by_id']}")
     if files_touched:
-        out.append("files edited: " + "; ".join(files_touched[:40]) + (" …" if len(files_touched) > 40 else ""))
-    out.append(f"turns shown:  {first}-{last} of {total}" + ("" if (first == 1 and last == total) else "  (partial; use --start/--end for the rest)"))
-    out.append("")
-    out.append("---")
-    out.append("")
+        head.append(f"files edited: {len(files_touched)}")
+        head.extend(f"  {p}" for p in files_touched)
+    head.append(f"turns shown:  {first}-{last} of {total}" + ("" if (first == 1 and last == total) else "  (partial; use --start/--end for the rest)"))
+    header = "\n".join(head)
+    if redacting:
+        header, redactions = redact(header)
+
+    out: List[str] = []
     for i, tr in enumerate(sel, first):
-        stamp = local_stamp(tr["ts"])
         text = tr["text"]
-        if args.max_chars and len(text) > args.max_chars:
-            text = text[: args.max_chars] + f"\n… [{len(tr['text']) - args.max_chars} more chars trimmed]"
-        if not args.no_redact:
+        if redacting:  # before trimming, so a credential is never cut into an unrecognisable half
             text, k = redact(text)
             redactions += k
-        out.append(f"### {i}. [{stamp}] {tr['who']}")
+        if args.max_chars and len(text) > args.max_chars:
+            text = text[: args.max_chars] + f"\n… [{len(text) - args.max_chars} more chars trimmed]"
+        out.append(f"### {i}. [{local_stamp(tr['ts'])}] {tr['who']}")
         if tr["tools"] and not args.no_tools:
-            shown_tools = tr["tools"][:25]
-            for tl in shown_tools:
-                if not args.no_redact:
-                    tl, k = redact(tl)
-                    redactions += k
+            for tool in tr["tools"][:25]:
+                tl, k = format_tool(tool, redacting)
+                redactions += k
                 out.append(f"    tool: {tl}")
             if len(tr["tools"]) > 25:
                 out.append(f"    tool: … {len(tr['tools']) - 25} more tool calls")
@@ -931,10 +1014,9 @@ def run_dump(sessions: List[Dict[str, Any]], args: argparse.Namespace) -> None:
             out.append(text)
         out.append("")
 
-    body = "\n".join(out)
-    head_note = ("redaction:    off (--no-redact)" if args.no_redact
+    head_note = ("redaction:    off (--no-redact)" if not redacting
                  else f"redaction:    {redactions} item(s) that looked like credentials were masked")
-    body = body.replace("\n---\n", f"\n{head_note}\n\n---\n", 1)
+    body = header + "\n" + head_note + "\n\n---\n\n" + "\n".join(out)
     chars = len(body)
     stats = (f"{total} turns, {chars} chars (~{chars // 4} tokens) in this dump; "
              f"{len(files_touched)} file(s) edited; {redactions} redaction(s)")
@@ -943,10 +1025,11 @@ def run_dump(sessions: List[Dict[str, Any]], args: argparse.Namespace) -> None:
         print(f"session:  {s['session_id']}   {s['title']}")
         print(f"dir:      {s['cwd']}")
         print(stats)
-        if chars > 150000:
-            step = max(10, int(total * 120000 / chars))
-            ranges = [f"--start {a} --end {min(total, a + step - 1)}" for a in range(1, total + 1, step)]
-            print("large; read it in pieces:  " + "   ".join(ranges))
+        if chars > DUMP_PART_CHARS:
+            step = max(5, int(total * DUMP_PART_CHARS / chars))
+            print(f"large; dump it in {-(-total // step)} parts, one file each:")
+            for a in range(1, total + 1, step):
+                print(f"  --start {a} --end {min(total, a + step - 1)}")
         return
     if args.out:
         with open(args.out, "w", encoding="utf-8") as fh:
@@ -955,6 +1038,11 @@ def run_dump(sessions: List[Dict[str, Any]], args: argparse.Namespace) -> None:
     else:
         sys.stdout.write(body)
         print(stats, file=sys.stderr)
+
+
+# Largest dump the summarize skill reads with one Read call (Read caps each call's output, so
+# a whole-session file above this has to be written and read as several parts).
+DUMP_PART_CHARS = 60000
 
 
 # --------------------------------------------------------------------------- main
@@ -977,7 +1065,7 @@ def build_parser() -> argparse.ArgumentParser:
     ls.add_argument("--running", action="store_true", help="only sessions with a live Claude process")
     ls.add_argument("--exclude-running", action="store_true", help="hide sessions with a live Claude process (e.g. this one)")
     ls.add_argument("--include-empty", action="store_true", help="also list sessions with no transcript or no prompts")
-    ls.add_argument("--table", action="store_true", help="compact outlined table, one row per session (no ids in it)")
+    ls.add_argument("--table", action="store_true", help="outlined table, one row per session, with the full id and directory")
     ls.add_argument("--json", action="store_true", help="emit JSON instead of text")
 
     sh = sub.add_parser("show", help="details and the last turns of one session", description="Print one session's header and final turns.")
@@ -997,7 +1085,7 @@ def build_parser() -> argparse.ArgumentParser:
     dp.add_argument("--max-chars", type=int, default=0, metavar="N", help="trim each turn's text to N chars (0 = no trim)")
     dp.add_argument("--no-tools", action="store_true", help="omit the tool-call lines")
     dp.add_argument("--no-redact", action="store_true", help="do not mask things that look like credentials")
-    dp.add_argument("--stats", action="store_true", help="print size only, plus suggested --start/--end ranges for big sessions")
+    dp.add_argument("--stats", action="store_true", help="print size only, plus --start/--end parts for sessions too big to read in one go")
 
     sub.add_parser("doctor", help="check Python, Claude Code, the session store and clipboard; installs nothing",
                    description="Report whether this machine can run these scripts. Advises what to install; never installs anything.")
@@ -1006,6 +1094,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     argv = sys.argv[1:]
+    if argv[:1] == ["help"]:
+        argv = (argv[1:2] + ["--help"]) if argv[1:2] and argv[1] in SUBCOMMANDS else ["--help"]
     if not argv or (argv[0] not in SUBCOMMANDS and argv[0] not in ("-h", "--help")):
         argv = ["list"] + argv  # bare flags mean 'list'
     args = build_parser().parse_args(argv)

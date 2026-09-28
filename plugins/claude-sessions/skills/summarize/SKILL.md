@@ -35,31 +35,43 @@ going further, so the user can stop you if it is the wrong one.
 ### 2. Size it and dump it to the scratchpad
 
 ```bash
-python3 <skill-dir>/../../scripts/sessions.py dump <id-prefix> --stats
+python3 <skill-dir>/../../scripts/sessions.py dump <id> --stats
 ```
 
-That prints the turn count, character count and, for big sessions, suggested
-`--start/--end` ranges. Then write the clean transcript to a scratch file rather than
-reading it from stdout, because long command output gets truncated:
+That prints the turn count and character count. Then write the clean transcript to a
+scratch file rather than reading it from stdout, because long command output gets
+truncated. Use the scratchpad directory if the session has one, otherwise the system temp
+directory; never the user's project.
 
 ```bash
-python3 <skill-dir>/../../scripts/sessions.py dump <id-prefix> --out <scratchpad>/session-<id8>.md
+python3 <skill-dir>/../../scripts/sessions.py dump <id> --out <scratch-dir>/session-<id8>.md
 ```
 
-The dump has a header (title, directory, branch, dates, status, size, resume command,
-files edited, redaction count) and then numbered turns: `### N. [time] you` or
+If `--stats` printed `large; dump it in N parts`, the whole dump is too big for one Read
+call. Write one file per part instead, using the ranges it printed:
+
+```bash
+python3 <skill-dir>/../../scripts/sessions.py dump <id> --start <a> --end <b> --out <scratch-dir>/session-<id8>-part<n>.md
+```
+
+The dump has a header (title, directory, branch, dates, status, size, resume commands,
+the full path of every file edited, one per line, and the redaction count) and then numbered turns: `### N. [time] you` or
 `### N. [time] claude`, with one `tool:` line per tool call and Claude's text. Tool
 output, thinking and subagent traffic are not in it. Anything that looks like a credential
 is already masked with `[REDACTED ...]`; keep those markers as they are.
 
-Read the scratch file with the Read tool. Under about 150 000 characters, read it in one
-go. Above that, read it in the pieces the `--stats` output suggested and keep running
-notes per piece (topics seen, decisions, open items) before writing anything; do not try
-to hold a 500 KB session in your head.
+Read the scratch file with the Read tool. For a session split into parts, read the parts
+in order and keep running notes per part (topics seen, decisions, open items) before
+writing anything; do not try to hold a 500 KB session in your head. If a Read call
+reports the file is too large, fall back to its `offset`/`limit` parameters rather than
+skipping the rest.
 
 ### 3. Ask where to write, before writing
 
-Use AskUserQuestion with two questions:
+Ask only what the request left open. "Summarize it to a file in this directory" has
+already answered the location; "with the full transcript" has answered the appendix. When
+both are answered, confirm them in one line and go on. Otherwise use AskUserQuestion with
+the open questions:
 
 - **Location.** Options: the current working directory (Recommended), the session's own
   project directory, or the user types a path. Give the proposed filename in the question
@@ -71,6 +83,11 @@ Use AskUserQuestion with two questions:
 
 If the target file already exists, say so and ask before overwriting. Never write anywhere
 but the location the user chose.
+
+If nobody can answer (a non-interactive run such as `claude -p`, where AskUserQuestion is
+unavailable), use the defaults: the current working directory and the condensed
+transcript, never overwrite an existing file (add `-2`, `-3` to the name instead), and
+state in the report which defaults were used.
 
 ### 4. Write the document
 
@@ -87,7 +104,8 @@ Structure:
 
 | | |
 |---|---|
-| Session | `<id8>` (<directory>, branch <branch>) |
+| Session | `<full session id>` |
+| Directory | `<full directory path>`, branch <branch> |
 | When | <started> to <last real conversation> |
 | Size | <N prompts>, <N turns>, <cost if known> |
 | Status | <exited / crashed / running> |
@@ -95,7 +113,11 @@ Structure:
 
 Resume it:
 
-    cd <directory> && claude --continue        (or the --resume <id> form)
+    cd <full directory path> && claude --resume <full session id>
+
+Always the `--resume <id>` form, taken from the dump's `by id:` line: `--continue` only
+means this session while it is the newest in its directory, and this document outlives
+that.
 
 ## Summary
 
@@ -137,8 +159,11 @@ summaries omit. Empty is fine; say "none".
 
 ## Files edited
 
-From the dump header's `files edited` line, one per line, with a phrase on what changed if
-the transcript says. Omit the section if the session edited nothing.
+From the dump header's `files edited` list: every path in full, one per line, with a
+phrase on what changed if the transcript says. That list comes from Edit, Write and
+NotebookEdit calls only; files changed through shell commands (`>>`, `sed -i`, `cp`) are
+not in it, so add the ones the transcript makes clear and mark them "(via shell)". Omit
+the section if the session edited nothing.
 
 ## Transcript (condensed)
 
@@ -165,15 +190,27 @@ Rules for the content:
   check the original.
 - **Personal data in prompts** (email addresses, names of third parties) stays as it
   appears when it is the substance of the work, and is left out when it is incidental.
-- **No commands or ids in tables** except the short id in the header table; the resume
-  command goes in the indented code line as shown.
+- **Copyable values are complete.** Session ids, paths, URLs and commands appear in full
+  wherever they are, tables included. Never trim one with `…` or cut an id to a prefix.
+  Only descriptive text (prompts, replies in the appendix) is trimmed, and it is marked
+  with `…` when it is.
 
 ### 5. Report
 
 After writing, tell the user in a few lines: the path in a code block on its own line, the
 topic count, how many action items and open questions, and anything you flagged
-(a possible secret, a chunk you had to skim, a very long session where the appendix was
+(a possible secret, a part you had to skim, a very long session where the appendix was
 trimmed). Offer to resume the session if they want to pick up an action item now.
+
+If the session has no `/rename` title and the title it shows (Claude Code's generated one,
+which comes from the opening topic) does not match what the session was mostly about,
+suggest a better one in a line, so the session is findable later:
+
+```
+/rename <short title drawn from the biggest topic>
+```
+
+Say it has to be typed inside that session (resume it first); it cannot be set from here.
 
 ## Cleanup note worth giving unprompted
 
