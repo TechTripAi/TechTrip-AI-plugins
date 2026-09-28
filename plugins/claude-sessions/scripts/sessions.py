@@ -249,7 +249,9 @@ def load_history(cfg: str) -> Dict[str, Dict[str, Any]]:
 
 
 def load_live(cfg: str) -> Dict[str, Dict[str, Any]]:
-    """~/.claude/sessions/<pid>.json: sessions Claude Code believes are running."""
+    """~/.claude/sessions/<pid>.json: sessions Claude Code believes are running. 'status' is
+    busy/idle, 'name' the agent-view name and 'name_source' whether it was derived or set
+    with a rename."""
     out: Dict[str, Dict[str, Any]] = {}
     for path in glob.glob(os.path.join(cfg, "sessions", "*.json")):
         try:
@@ -264,8 +266,50 @@ def load_live(cfg: str) -> Dict[str, Dict[str, Any]]:
         alive = False
         if isinstance(pid, int):
             alive = pid_alive(pid)
-        out[sid] = {"pid": pid, "alive": alive, "status": d.get("status"), "name": d.get("name"), "cwd": d.get("cwd")}
+        out[sid] = {"pid": pid, "alive": alive, "status": d.get("status"), "name": d.get("name"),
+                    "name_source": d.get("nameSource"), "kind": d.get("kind"), "cwd": d.get("cwd"),
+                    "source": "pid file"}
     return out
+
+
+def load_agents() -> Optional[Dict[str, Dict[str, Any]]]:
+    """'claude agents --json': the sessions Claude Code's own agent view lists as live
+    (interactive and background), with busy/idle and the agent-view name. This is the
+    supported programmatic interface, so it is preferred over the pid files when it works.
+    None when claude is not on the path or the command fails, so the caller can fall back."""
+    exe = shutil.which("claude")
+    if not exe:
+        return None
+    try:
+        proc = subprocess.run([exe, "agents", "--json"], capture_output=True, text=True, timeout=10)
+        rows = json.loads(proc.stdout or "[]")
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return None
+    if not isinstance(rows, list):
+        return None
+    out: Dict[str, Dict[str, Any]] = {}
+    for d in rows:
+        sid = d.get("sessionId") if isinstance(d, dict) else None
+        if not sid:
+            continue
+        out[sid] = {"pid": d.get("pid"), "alive": True, "status": d.get("status"), "name": d.get("name"),
+                    "name_source": None, "kind": d.get("kind"), "cwd": d.get("cwd"), "source": "claude agents"}
+    return out
+
+
+def load_live_sessions(cfg: str) -> Dict[str, Dict[str, Any]]:
+    """Agent view's list, filled in from the pid files: the pid files add sessions agent view
+    does not report (checked with pid_alive) and the name source, which the JSON lacks."""
+    live = load_live(cfg)
+    agents = load_agents()
+    if agents is None:
+        return live
+    for sid, rec in live.items():
+        if sid in agents:
+            agents[sid]["name_source"] = rec.get("name_source")
+        else:
+            agents[sid] = rec
+    return agents
 
 
 def load_project_state(cfg: str) -> Dict[str, Dict[str, Any]]:
@@ -360,7 +404,7 @@ def collect_sessions(cfg: str, deep: bool, redacting: bool = True) -> List[Dict[
     masked with redact() here, once, so list, --table, --json, show and --grep never print
     a credential; dump has its own pass and --no-redact."""
     history = load_history(cfg)
-    live = load_live(cfg)
+    live = load_live_sessions(cfg)
     proj_state = load_project_state(cfg)
     last_by_project = {p: v.get("lastSessionId") for p, v in proj_state.items()}
     graceful_by_project = {p: v.get("lastGracefulShutdown") for p, v in proj_state.items()}
@@ -445,10 +489,16 @@ def collect_sessions(cfg: str, deep: bool, redacting: bool = True) -> List[Dict[
             s["last_prompt_at"] and s["last_active"] and s["last_active"] - s["last_prompt_at"] > 3600
             and s.get("exited_explicitly")
         )
-        lv = live.get(sid)
+        lv = live.get(sid) or {}
+        # activity: what agent view reports for a live session, 'working' or 'idle'; None when closed.
+        s["activity"] = None
+        s["name"] = lv.get("name")
+        s["kind"] = lv.get("kind")
+        s["live_source"] = lv.get("source") if lv.get("alive") else None
         if lv and lv["alive"]:
             s["status"] = "running"
             s["pid"] = lv["pid"]
+            s["activity"] = "working" if lv.get("status") == "busy" else "idle"
         elif lv and not lv["alive"]:
             s["status"] = "closed (stale live record)"
         elif last_by_project.get(s["cwd"]) == sid and graceful_by_project.get(s["cwd"]) is False:
@@ -457,16 +507,21 @@ def collect_sessions(cfg: str, deep: bool, redacting: bool = True) -> List[Dict[
             s["status"] = "closed (you typed exit)"
         else:
             s["status"] = "closed"
-        s["title"] = s["custom_title"] or s["ai_title"] or s["summary"] or (one_line(s["first_prompt"], 70) if s["first_prompt"] else "(untitled)")
+        # A name set in agent view (Ctrl+R) ranks with /rename; a derived name like 'my-app-1f' does not.
+        renamed = s["name"] if lv.get("name_source") == "custom" else None
+        s["title"] = (s["custom_title"] or renamed or s["ai_title"] or s["summary"]
+                      or (one_line(s["first_prompt"], 70) if s["first_prompt"] else "(untitled)"))
         if redacting:
             s["title"] = redact(s["title"])[0]
+        s["state_group"] = state_group(s)
         s["newest_in_dir"] = bool(s["cwd"]) and newest_by_cwd.get(s["cwd"]) == sid
         s["resume_by_id"] = f"claude --resume {sid}"
         s["resume_alt"] = None
         if not s["has_transcript"]:
             s["resume_command"] = "(no transcript on disk; nothing to resume)"
         elif s["status"] == "running":
-            s["resume_command"] = f"already running as pid {s['pid']}; switch to that terminal, or fork it with: claude --resume {sid} --fork-session"
+            s["resume_command"] = (f"already running ({s['activity']}) as pid {s['pid']}; switch to that terminal or open it from "
+                                   f"'claude agents', or fork it with: claude --resume {sid} --fork-session")
         elif s["cwd"] and s["newest_in_dir"]:
             # Short form: no id to copy. The id form is kept as the exact alternative.
             s["resume_command"] = cd_then(s["cwd"], "claude --continue")
@@ -512,15 +567,42 @@ def find_one(sessions: List[Dict[str, Any]], key: str) -> Dict[str, Any]:
     return hits[0]
 
 
-def short_status(status: str) -> str:
-    """One word for table cells."""
+def short_status(s: Dict[str, Any]) -> str:
+    """One word for table cells: working (live and busy), running (live and idle), exited,
+    crashed or closed."""
+    if s["status"] == "running":
+        return "working" if s.get("activity") == "working" else "running"
     return {
-        "running": "running",
         "closed (you typed exit)": "exited",
         "closed (not shut down cleanly)": "crashed",
         "closed (stale live record)": "closed",
         "closed": "closed",
-    }.get(status, status)
+    }.get(s["status"], s["status"])
+
+
+# Group headings and row icons borrowed from Claude Code's agent view (`claude agents`),
+# so a table here reads like that screen: ✽ working, ✻ live but idle, ∙ exited, and '!'
+# for a session that needs a look (crashed, or a live record whose process is gone).
+STATE_GROUPS = ("Working", "Running", "Needs attention", "Closed")
+_ICONS = {"Working": "✽", "Running": "✻", "Needs attention": "!", "Closed": "∙"}
+_ASCII_ICONS = {"Working": "*", "Running": "+", "Needs attention": "!", "Closed": "."}
+
+
+def state_group(s: Dict[str, Any]) -> str:
+    if s["status"] == "running":
+        return "Working" if s.get("activity") == "working" else "Running"
+    if s["status"] in ("closed (not shut down cleanly)", "closed (stale live record)"):
+        return "Needs attention"
+    return "Closed"
+
+
+def state_icon(s: Dict[str, Any]) -> str:
+    icons = _ICONS
+    try:
+        "✽✻∙".encode(sys.stdout.encoding or "utf-8")
+    except (UnicodeEncodeError, LookupError):
+        icons = _ASCII_ICONS  # a console that cannot draw the agent-view glyphs (older Windows)
+    return icons[s["state_group"]]
 
 
 # --------------------------------------------------------------------------- doctor
@@ -677,7 +759,10 @@ def print_list(sessions: List[Dict[str, Any]], args: argparse.Namespace) -> None
     scope = " in this directory" + ("" if args.exact else " and below") if args.here else ""
     print(f"{len(shown)} of {len(sessions)} matching session(s){scope}, most recent first\n")
     for i, s in enumerate(shown, 1):
-        tag = "" if s["status"] == "closed" else f"  [{s['status']}]"
+        if s["status"] == "running":
+            tag = f"  [running, {s['activity']}]"
+        else:
+            tag = "" if s["status"] == "closed" else f"  [{s['status']}]"
         print(f"{i}. {humanize(s['last_active'])} ({local_stamp(s['last_active'])}){tag}")
         if s.get("reopened_only"):
             print(f"   note:    last real conversation was {humanize(s['last_prompt_at'])} ({local_stamp(s['last_prompt_at'])}); "
@@ -686,6 +771,8 @@ def print_list(sessions: List[Dict[str, Any]], args: argparse.Namespace) -> None
         print(f"   dir:     {s['cwd'] or '?'}{branch}")
         if s["title"] and s["title"] != s["first_prompt"]:
             print(f"   title:   {one_line(s['title'], 100)}")
+        if s.get("name") and s["status"] == "running" and s["name"] != s["title"]:
+            print(f"   name:    {s['name']}   (as shown in 'claude agents')")
         if s["last_prompt"]:
             print(f"   you:     {one_line(s['last_prompt'], 110)}")
         if s["last_assistant"]:
@@ -710,41 +797,73 @@ def print_list(sessions: List[Dict[str, Any]], args: argparse.Namespace) -> None
 
 
 def print_table(sessions: List[Dict[str, Any]], args: argparse.Namespace) -> None:
-    """Outlined table, one row per session. The id and directory are always printed in full,
+    """Outlined table, one row per session, grouped like agent view (--group-by state, the
+    default), by directory, or flat (none). The id and directory are always printed in full,
     however wide that makes the row, so they can be copied straight out of it; only the
-    'you said' text is trimmed."""
+    title and 'you said' text are trimmed. Under --group-by dir the directory is the group
+    heading, printed once in full, so the column is dropped."""
     if not sessions:
         print("No sessions matched. Try --include-empty, a wider --since, or drop --project/--here/--grep.")
         return
     shown = sessions[: args.limit] if args.limit else sessions
-    rows: List[List[str]] = []
-    for i, s in enumerate(shown, 1):
-        when = f"{humanize(s['last_prompt_at'] if s.get('reopened_only') else s['last_active'])}"
+    by_dir = args.group_by == "dir"
+    heads = ["#", "status", "last active", "title", "session id"] + ([] if by_dir else ["directory"]) + ["you said"]
+
+    def row(i: int, s: Dict[str, Any]) -> List[str]:
+        when = humanize(s["last_prompt_at"] if s.get("reopened_only") else s["last_active"])
         stamp = local_stamp(s["last_prompt_at"] if s.get("reopened_only") else s["last_active"])
-        rows.append([
+        cells = [
             str(i),
+            f"{state_icon(s)} {short_status(s)}" + ("*" if s.get("reopened_only") else ""),
             f"{when} ({stamp[5:]})",
-            short_status(s["status"]) + ("*" if s.get("reopened_only") else ""),
+            one_line(s["title"] or "", 32),
             s["session_id"],
-            s["cwd"] or "?",
-            one_line(s["last_prompt"] or s["title"] or "", 50),
-        ])
-    heads = ["#", "last active", "status", "session id", "directory", "you said"]
-    # Every column is as wide as its longest cell; 'you said' was already trimmed above.
-    widths = [max(len(h), *(len(r[c]) for r in rows)) for c, h in enumerate(heads)]
+        ]
+        if not by_dir:
+            cells.append(s["cwd"] or "?")
+        cells.append(one_line(s["last_prompt"] or "", 50))
+        return cells
+
+    # Groups keep the newest-first order inside them; the row number runs on across groups
+    # so '#' still identifies a session whichever grouping is used.
+    groups: List[Tuple[Optional[str], List[List[str]]]] = []
+    if args.group_by == "state":
+        for g in STATE_GROUPS:
+            members = [(i, s) for i, s in enumerate(shown, 1) if s["state_group"] == g]
+            if members:
+                groups.append((g, [row(i, s) for i, s in members]))
+    elif by_dir:
+        order: List[str] = []
+        for s in shown:
+            d = s["cwd"] or "?"
+            if d not in order:
+                order.append(d)  # first appearance is the newest session in that directory
+        for d in order:
+            groups.append((d, [row(i, s) for i, s in enumerate(shown, 1) if (s["cwd"] or "?") == d]))
+    else:
+        groups.append((None, [row(i, s) for i, s in enumerate(shown, 1)]))
+
+    all_rows = [r for _, rs in groups for r in rs]
+    # Every column is as wide as its longest cell; the trimmed columns were cut above.
+    widths = [max(len(h), *(len(r[c]) for r in all_rows)) for c, h in enumerate(heads)]
 
     def fmt(cells: List[str]) -> str:
         return "| " + " | ".join(c.ljust(w) for c, w in zip(cells, widths)) + " |"
 
     rule = "+" + "+".join("-" * (w + 2) for w in widths) + "+"
     scope = " in this directory" + ("" if args.exact else " and below") if args.here else ""
-    print(f"{len(shown)} of {len(sessions)} matching session(s){scope}, most recent first\n")
-    print(rule)
-    print(fmt(heads))
-    print(rule)
-    for r in rows:
-        print(fmt(r))
-    print(rule)
+    how = {"state": "grouped by state", "dir": "grouped by directory", "none": "most recent first"}[args.group_by]
+    print(f"{len(shown)} of {len(sessions)} matching session(s){scope}, {how}\n")
+    for heading, rs in groups:
+        if heading is not None:
+            print(heading)
+        print(rule)
+        print(fmt(heads))
+        print(rule)
+        for r in rs:
+            print(fmt(r))
+        print(rule)
+        print()
     if any(s.get("reopened_only") for s in shown):
         print("* only reopened and exited later; the date shown is the last real conversation")
     if len(sessions) > len(shown):
@@ -1076,6 +1195,9 @@ def build_parser() -> argparse.ArgumentParser:
     ls.add_argument("--exclude-running", action="store_true", help="hide sessions with a live Claude process (e.g. this one)")
     ls.add_argument("--include-empty", action="store_true", help="also list sessions with no transcript or no prompts")
     ls.add_argument("--table", action="store_true", help="outlined table, one row per session, with the full id and directory")
+    ls.add_argument("--group-by", choices=("state", "dir", "none"), default="state", metavar="state|dir|none",
+                    help="with --table: group rows like agent view does, by state (default: working, running, "
+                         "needs attention, closed) or by directory; 'none' for one flat table")
     ls.add_argument("--json", action="store_true", help="emit JSON instead of text")
     ls.add_argument("--no-redact", action="store_true", help="show prompts and replies as typed; by default things that look like credentials are masked")
 

@@ -81,9 +81,10 @@ everything this can do." Not on later answers in the same session.
    ```
 
    That prints the 10 most recent sessions across all projects, newest first. Each entry has:
-   relative and absolute last-active time, status, directory, git branch, title, the last
-   meaningful thing the user typed, Claude's last reply, the full session id, prompt count and
-   cost, and a copy-pasteable resume command.
+   relative and absolute last-active time, status (a live session also says whether it is
+   working or idle, from Claude Code's own agent view), directory, git branch, title, the
+   last meaningful thing the user typed, Claude's last reply, the full session id, prompt
+   count and cost, and a copy-pasteable resume command.
 
 2. **Narrow when the question is specific.** Filters go on `list` and combine freely:
 
@@ -97,15 +98,17 @@ everything this can do." Not on later answers in the same session.
    | "on branch foo" | `--branch foo` |
    | "what did we end on?" | `show <id-prefix or title> --tail 6` (prints the final turns) |
    | "copy that for me", long id | `copy <id-prefix or title>` (clipboard; prints the command too) |
+   | "which ones are running", "what is each one doing" | `--running` (live sessions, each marked working or idle) |
    | "all of them" | `--all` |
-   | building a table yourself | `--json`, or `--table` for the outlined form with full ids and paths |
+   | building a table yourself | `--json`, or `--table` for the outlined form with full ids and paths, grouped by state like agent view; `--group-by dir` groups by directory instead, `--group-by none` is one flat table |
 
    `--here` is the answer to "what have I done in this project": it keys on the directory
    Claude Code was started in, so a repo root also catches sessions started in its
    subdirectories. When the user names a directory that is not the current one, use
    `--project` instead.
 
-   The session the user is typing in right now shows up as `[running]`. When the user is
+   The session the user is typing in right now shows up as `[running, working]`; a live
+   session waiting for input in another terminal as `[running, idle]`. When the user is
    looking for a *lost* session, add `--exclude-running` so it drops out of the list.
 
 3. **Present the answer, not the dump.** Lead with the most likely match and say why it is the
@@ -123,21 +126,30 @@ everything this can do." Not on later answers in the same session.
    Present in two phases:
 
    **Phase 1, the shortlist.** A numbered markdown table, one row per candidate, with
-   these columns: `#`, `Last active` ("11 hours ago, 22:14"), `Status` (one word: running,
-   exited, crashed or closed, as `list --table` prints it, not the long form), `Session id` (the full 36-character id), `Directory` (the full path),
-   and `You said` (the last prompt, quoted, trimmed to about 50 characters). Put the id and
-   the directory in backticks so they copy as one piece. Below the table, one line per
-   thing worth flagging: a session that is running in another terminal, a note that a
-   row's date is the last real conversation rather than a reopen, a session close to the
-   30-day cleanup. When one candidate is clearly it, skip straight to phase 2 for that one
-   and mention the runners-up in a sentence. `list --table` prints the same shape.
+   these columns: `#`, `Status` (the icon and one word exactly as `list --table` prints
+   them: `✽ working`, `✻ running`, `∙ exited`, `! crashed`, `∙ closed`; never the long
+   form), `Last active` ("11 hours ago, 22:14"), `Title` (trimmed to about 30 characters),
+   `Session id` (the full 36-character id), `Directory` (the full path), and `You said`
+   (the last prompt, quoted, trimmed to about 50 characters). Put the id and the directory
+   in backticks so they copy as one piece. The icons and the state words are the ones
+   Claude Code's agent view (`claude agents`) uses, so the two screens read alike. Below
+   the table, one line per thing worth flagging: a session that is running in another
+   terminal, a note that a row's date is the last real conversation rather than a reopen,
+   a session close to the 30-day cleanup. When one candidate is clearly it, skip straight
+   to phase 2 for that one and mention the runners-up in a sentence.
+
+   `list --table` prints the same columns, grouped under the headings Working, Running,
+   Needs attention and Closed (or by directory with `--group-by dir`). Keep the row
+   numbers it prints; they run on across the groups, so "number 4" means the same session
+   to the user and the script. For a short list, one table is enough; for a long one
+   across several states, keep the group headings.
 
    Example shape:
 
-   | # | Last active | Status | Session id | Directory | You said |
-   |---|---|---|---|---|---|
-   | 1 | 25 minutes ago, 00:50 | running | `3f2a9c1e-7b4d-4e8a-9c2f-1d5e6a7b8c9d` | `/Users/me/code/my-app` | "Add the retry wrapper around the upload call" |
-   | 2 | 2 days ago, 18:46 | crashed | `a81c0f3d-2e5b-4c7a-8d9e-0f1a2b3c4d5e` | `/Users/me/code/my-app` | "Give me the command to update the local plugin, t…" |
+   | # | Status | Last active | Title | Session id | Directory | You said |
+   |---|---|---|---|---|---|---|
+   | 1 | ✽ working | 25 minutes ago, 00:50 | Upload retries | `3f2a9c1e-7b4d-4e8a-9c2f-1d5e6a7b8c9d` | `/Users/me/code/my-app` | "Add the retry wrapper around the upload call" |
+   | 2 | ! crashed | 2 days ago, 18:46 | Local plugin refresh | `a81c0f3d-2e5b-4c7a-8d9e-0f1a2b3c4d5e` | `/Users/me/code/my-app` | "Give me the command to update the local plugin, t…" |
 
    (The ids and paths above are illustrations of the shape; always use the script's real values.)
 
@@ -172,9 +184,16 @@ everything this can do." Not on later answers in the same session.
 
 ## Reading the status column
 
-- `running`: a live Claude process owns that session. Resuming it in a second terminal
-  forks the conversation and the two copies diverge, so say that and suggest switching to the
-  original terminal, or `--fork-session` if a branch is what they want.
+The live states come from `claude agents --json`, the same source as Claude Code's agent
+view, with the `~/.claude/sessions/<pid>.json` markers as the fallback when `claude` is
+not on the path. The words match agent view's so the user can move between the two.
+
+- `running` (`✻`, and `working` with `✽` when Claude is mid-turn): a live Claude process
+  owns that session, `idle` when it is waiting for the user. Resuming it in a second
+  terminal forks the conversation and the two copies diverge, so say that and suggest
+  switching to the original terminal, or opening it from `claude agents`, or
+  `--fork-session` if a branch is what they want. The `name:` line is what agent view
+  calls it (`my-app-3f`); a name set there with Ctrl+R is used as the title.
 - `closed (you typed exit)`: ended deliberately. Resume is safe.
 - `closed (not shut down cleanly)`: the process died or the terminal was closed. Everything
   up to the last completed turn is on disk; the in-flight turn, if any, is lost. This is

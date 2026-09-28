@@ -36,6 +36,12 @@
       "prompt": "what claude sessions have I had in this directory? show me what each one ended on",
       "expected_output": "Runs the script with list --here (directory and subdirectories) and presents a numbered markdown table with last active, status, the full session id, the full directory and the quoted last prompt; the id and directory are complete, only the prompt is trimmed. Flags any row that is running in another terminal or crashed. Offers the resume command for a chosen row in a code block.",
       "files": []
+    },
+    {
+      "id": 7,
+      "prompt": "which of my claude sessions are running right now, and what is each one doing?",
+      "expected_output": "Runs list --running and reports each live session with working or idle, its directory, full session id, the agent-view name and the last thing the user said. Warns that resuming a running session in a second terminal forks it and points to the original terminal or 'claude agents' instead. Does not call the current session lost.",
+      "files": []
     }
   ]
 }

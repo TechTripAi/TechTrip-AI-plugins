@@ -117,6 +117,14 @@ with argparse subcommands `list` (default when only flags are given; `main()` pr
   (live-session markers; pid liveness decides `running` vs `stale live record`), and
   `~/.claude.json` `projects.<cwd>` (`lastGracefulShutdown` drives the "not shut down
   cleanly" flag). The encoded directory name is never decoded; `cwd` is read from the records.
+  One command is run as well: `claude agents --json` (`load_agents`), Claude Code's own
+  live-session list behind agent view, which is the primary source for `running`, the
+  `activity` (`working`/`idle`) and the agent-view `name`; `load_live_sessions` merges it
+  with the pid files and falls back to them alone when `claude` is missing or fails.
+- **`--table` vocabulary is agent view's.** `state_group` / `state_icon` / `short_status`
+  map a session to Working, Running, Needs attention or Closed and to `✽ ✻ ! ∙`; `--group-by`
+  (`state` default, `dir`, `none`) only changes how `print_table` arranges rows. Keep the
+  words and icons in step with `claude agents` when Claude Code changes them.
 - **`scan_transcript`** prefilters lines by `type` so unknown record types are ignored rather
   than fatal. `--deep` is the only thing that makes `list` read assistant blocks, which is why
   it is slow; `show` always does.
