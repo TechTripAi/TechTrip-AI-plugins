@@ -121,6 +121,9 @@ with argparse subcommands `list` (default when only flags are given; `main()` pr
   than fatal. `--deep` is the only thing that makes `list` read assistant blocks, which is why
   it is slow; `show` always does.
 - **`collect_sessions` → `apply_filters` → `print_list` / `print_table` / `to_json`.**
+  `collect_sessions(redacting=True)` masks prompts, replies and titles with `redact()` once,
+  before anything derives from them, so every output path (and `--grep`) sees masked text;
+  `--no-redact` on `list` / `show` / `dump` turns it off.
   Add a new `list` flag in `build_parser()`, filter it in `apply_filters`, and make sure
   `to_json` still carries the field. `--here` compares `normcase(realpath())` of the session's
   cwd against the current directory (prefix match unless `--exact`).

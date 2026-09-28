@@ -123,8 +123,8 @@ everything this can do." Not on later answers in the same session.
    Present in two phases:
 
    **Phase 1, the shortlist.** A numbered markdown table, one row per candidate, with
-   these columns: `#`, `Last active` ("11 hours ago, 22:14"), `Status` (running, exited,
-   crashed, closed), `Session id` (the full 36-character id), `Directory` (the full path),
+   these columns: `#`, `Last active` ("11 hours ago, 22:14"), `Status` (one word: running,
+   exited, crashed or closed, as `list --table` prints it, not the long form), `Session id` (the full 36-character id), `Directory` (the full path),
    and `You said` (the last prompt, quoted, trimmed to about 50 characters). Put the id and
    the directory in backticks so they copy as one piece. Below the table, one line per
    thing worth flagging: a session that is running in another terminal, a note that a
@@ -194,8 +194,11 @@ everything this can do." Not on later answers in the same session.
   before anything was said. There is nothing to recover.
 - `--grep` matches the exact text they typed, typos included. If a search misses, try a
   shorter or alternative spelling before concluding the session is gone.
-- Transcripts can contain secrets that were pasted into a prompt. Quote only the line the
-  user needs, and do not copy transcript contents into other tools or files unless asked.
+- Transcripts can contain secrets that were pasted into a prompt. The script masks what
+  looks like a credential in everything it prints (`[REDACTED ...]`); keep the markers as
+  they are and never rerun with `--no-redact` unless the user asks for the raw text. The
+  masking is pattern-based, so quote only the line the user needs, and do not copy
+  transcript contents into other tools or files unless asked.
 
 ## When the script cannot help
 

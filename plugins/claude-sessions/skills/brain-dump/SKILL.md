@@ -301,9 +301,10 @@ output. Names are per repository for `--resume <name>`; ids work everywhere.
 - **Contents.** Transcripts hold everything you pasted into a prompt, including anything
   sensitive. They never leave the machine on their own, but treat `~/.claude/projects`
   like a private notebook. When you ask for a quote, ask for the line you need rather than
-  the whole exchange. The summarize skill masks what looks like a key or password before
-  Claude reads the transcript and flags anything it notices slipped through, but the
-  masking is pattern-based: check a summary before you share it.
+  the whole exchange. Everything the finder and the summarizer show you has what looks
+  like a key, token or password masked as `[REDACTED ...]`, and the summarizer flags
+  anything it notices slipped through. The masking is pattern-based, so check a summary
+  before you share it. For the raw text, use `--no-redact` in the terminal (Section 11).
 
 **Prompt: type into Claude Code**
 ```
@@ -338,8 +339,9 @@ Cheat sheet:
 | `list --running` / `--exclude-running` | live sessions only, or hide them |
 | `list --branch <name>` | git branch filter |
 | `list --json` | machine-readable, for jq or scripts |
+| `list --no-redact` / `show <id> --no-redact` | show prompts and replies as typed, credentials unmasked |
 | `show <id> --tail 6` | final turns of one session |
-| `dump <id> --out <file>` | clean, numbered transcript with credentials masked (what summarize reads) |
+| `dump <id> --out <file>` | clean, numbered transcript (what summarize reads); `--no-redact` to leave credentials unmasked |
 | `dump <id> --stats` | how big a dump would be, with part ranges for big sessions |
 | `copy <id>` | put that session's resume command on the clipboard |
 | `doctor` | check Python, Claude Code, the session store and clipboard; says what to install, installs nothing |
@@ -349,6 +351,7 @@ Cheat sheet:
 It reads `~/.claude/projects`, `~/.claude/history.jsonl`, `~/.claude/sessions` and
 `~/.claude.json`. Set `CLAUDE_CONFIG_DIR` if yours lives elsewhere. The only things it
 writes are your clipboard (`copy`) and the one file you name with `dump --out`.
+Everything it prints has credential-looking strings masked unless you add `--no-redact`.
 
 **If something does not work,** run `doctor` first. It tells you what is missing and what
 to install on your OS, and it never installs anything itself.

@@ -17,6 +17,7 @@ Subcommands (``list`` is assumed when none is given):
   sessions.py list --json              # machine-readable
 
 The only things it writes are the clipboard (``copy``) and the file you name (``dump --out``).
+Things that look like credentials are masked in everything it prints unless ``--no-redact``.
 """
 from __future__ import annotations
 
@@ -350,7 +351,14 @@ def scan_transcript(path: str, want_assistant: bool) -> Dict[str, Any]:
     return info
 
 
-def collect_sessions(cfg: str, deep: bool) -> List[Dict[str, Any]]:
+def _masked(items: List[Tuple[float, str]], redacting: bool) -> List[Tuple[float, str]]:
+    return [(ts, redact(t)[0]) for ts, t in items] if redacting else items
+
+
+def collect_sessions(cfg: str, deep: bool, redacting: bool = True) -> List[Dict[str, Any]]:
+    """Every session on disk. With redacting (the default), prompts, replies and titles are
+    masked with redact() here, once, so list, --table, --json, show and --grep never print
+    a credential; dump has its own pass and --no-redact."""
     history = load_history(cfg)
     live = load_live(cfg)
     proj_state = load_project_state(cfg)
@@ -368,7 +376,7 @@ def collect_sessions(cfg: str, deep: bool) -> List[Dict[str, Any]]:
         subagents = len(glob.glob(os.path.join(os.path.dirname(path), sid, "subagents", "*.jsonl")))
         hist = history.get(sid, {})
         prompts = hist.get("prompts") or info["prompts"]
-        prompts = sorted(prompts, key=lambda p: p[0])
+        prompts = _masked(sorted(prompts, key=lambda p: p[0]), redacting)
         said = meaningful(prompts)
         cwd = info["cwd"] or hist.get("project")
         sessions[sid] = {
@@ -385,8 +393,8 @@ def collect_sessions(cfg: str, deep: bool) -> List[Dict[str, Any]]:
             "last_prompt_at": said[-1][0] if said else None,
             "exited_explicitly": bool(prompts) and is_exit(prompts[-1][1]),
             "prompts": prompts,
-            "assistant_texts": info["assistant_texts"],
-            "last_assistant": info["last_assistant"],
+            "assistant_texts": _masked(info["assistant_texts"], redacting),
+            "last_assistant": redact(info["last_assistant"])[0] if redacting and info["last_assistant"] else info["last_assistant"],
             "prompt_count": len(prompts),
             "subagent_count": subagents,
             "cost_usd": info["cost_usd"],
@@ -399,7 +407,7 @@ def collect_sessions(cfg: str, deep: bool) -> List[Dict[str, Any]]:
     for sid, hist in history.items():
         if sid in sessions:
             continue
-        prompts = sorted(hist["prompts"], key=lambda p: p[0])
+        prompts = _masked(sorted(hist["prompts"], key=lambda p: p[0]), redacting)
         said = meaningful(prompts)
         sessions[sid] = {
             "session_id": sid, "transcript": None, "cwd": hist.get("project"), "branch": None, "version": None,
@@ -450,6 +458,8 @@ def collect_sessions(cfg: str, deep: bool) -> List[Dict[str, Any]]:
         else:
             s["status"] = "closed"
         s["title"] = s["custom_title"] or s["ai_title"] or s["summary"] or (one_line(s["first_prompt"], 70) if s["first_prompt"] else "(untitled)")
+        if redacting:
+            s["title"] = redact(s["title"])[0]
         s["newest_in_dir"] = bool(s["cwd"]) and newest_by_cwd.get(s["cwd"]) == sid
         s["resume_by_id"] = f"claude --resume {sid}"
         s["resume_alt"] = None
@@ -1067,10 +1077,12 @@ def build_parser() -> argparse.ArgumentParser:
     ls.add_argument("--include-empty", action="store_true", help="also list sessions with no transcript or no prompts")
     ls.add_argument("--table", action="store_true", help="outlined table, one row per session, with the full id and directory")
     ls.add_argument("--json", action="store_true", help="emit JSON instead of text")
+    ls.add_argument("--no-redact", action="store_true", help="show prompts and replies as typed; by default things that look like credentials are masked")
 
     sh = sub.add_parser("show", help="details and the last turns of one session", description="Print one session's header and final turns.")
     sh.add_argument("id", metavar="ID|TITLE", help="session id prefix or exact title")
     sh.add_argument("--tail", type=int, default=6, help="how many turns to print (0 = all); default 6")
+    sh.add_argument("--no-redact", action="store_true", help="show the turns as typed; by default things that look like credentials are masked")
 
     cp = sub.add_parser("copy", help="put one session's resume command on the clipboard", description="Copy the resume command and print it.")
     cp.add_argument("id", metavar="ID|TITLE", help="session id prefix or exact title")
@@ -1123,18 +1135,18 @@ def main() -> None:
             print(f"no clipboard tool found (pbcopy, clip, wl-copy, xclip, xsel); copy this line yourself:\n{cmd}")
         return
     if args.cmd == "show":
-        sessions = collect_sessions(cfg, deep=True)
+        sessions = collect_sessions(cfg, deep=True, redacting=not args.no_redact)
         print_show(sessions, args.id, args.tail)
         return
     if args.cmd == "dump":
-        sessions = collect_sessions(cfg, deep=False)
+        sessions = collect_sessions(cfg, deep=False, redacting=not args.no_redact)
         run_dump(sessions, args)
         return
 
     # list
     if args.all:
         args.limit = 0
-    sessions = apply_filters(collect_sessions(cfg, deep=args.deep), args)
+    sessions = apply_filters(collect_sessions(cfg, deep=args.deep, redacting=not args.no_redact), args)
     if args.json:
         to_json(sessions, args)
     elif args.table:
