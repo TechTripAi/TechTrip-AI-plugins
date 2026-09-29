@@ -34,13 +34,13 @@ never decodes this; it reads `cwd` from the records instead, which is exact.
 | `type` | Notes |
 |---|---|
 | `user` | A turn from the user **or** a tool result fed back to the model. Real prompts have `message.content` as a string or text blocks, no `toolUseResult`, and `isMeta` false. Slash commands and skills arrive as `<command-message>…</command-message>` then `<command-name>/foo</command-name>` and `<command-args>…</command-args>`. `origin.kind` is `human` for typed prompts; `task-notification` (with `promptSource: "system"`, content `<task-notification>…<summary>…</summary>`) marks a background agent reporting back, not the user. `[Request interrupted by user]` marks an interruption. `isSidechain: true` marks subagent traffic in older layouts. |
-| `assistant` | Model output. `message.content` is a list of `text`, `tool_use` and `thinking` blocks. Carries `requestId`, `effort`, `attributionSkill`. |
+| `assistant` | Model output. `message.content` is a list of `text`, `tool_use` and `thinking` blocks. Carries `requestId`, `effort`, `attributionSkill`. `message.model` names the model and `message.usage` has `input_tokens`, `cache_creation_input_tokens`, `cache_read_input_tokens`, `output_tokens`. One API reply is written as several records (one per content block, `apiBlockIndex` 0, 1, …) that share `message.id` and `requestId` and repeat the same usage block, so usage must be counted once per `message.id`. |
 | `system` | Local command runs, compaction notices, etc. Carries `cwd`, `gitBranch`, `version`. |
 | `custom-title` | Set by `/rename` or `claude -n`. Last one wins. |
 | `ai-title` | Title Claude Code generates (`aiTitle`) from the opening topic, no timestamp. Rewritten many times per session but unchanged in practice (verified on 2.1.283); last one wins; used when there is no `custom-title`. |
 | `agent-name` | Derived display name (e.g. `my-app-3f`). Not a resume handle. |
 | `summary` | AI-generated title, when present. |
-| `cost-state` | Running totals: `totalCostUSD`, `totalDuration`, `modelUsage`. |
+| `cost-state` | Session totals: `totalCostUSD`, `totalDuration`, `totalAPIDuration`, `totalLinesAdded`/`Removed`, and `modelUsage` per model (`inputTokens`, `outputTokens`, `cacheReadInputTokens`, `cacheCreationInputTokens`, `costUSD`). Written near the end of the file when the session exits (once per exit; last one wins), so a session that is still running has none. The script reads `totalCostUSD` and `dump` splits it across Claude's turns by token weight (input 1, cache write 1.25, cache read 0.1, output 5) as an estimate per turn. |
 | `last-prompt`, `mode`, `permission-mode`, `atis-latch`, `queue-operation` | UI state. Ignored. |
 | `attachment`, `file-history-snapshot`, `file-history-delta` | Environment snapshots and file backups for `/rewind`. Ignored. |
 
@@ -73,5 +73,9 @@ covers those; the `dump` subcommand is what the summarize skill reads.
 Kept: `user` records that are real prompts (no `toolUseResult`, no `tool_result` blocks,
 not `isMeta`), and the `text` and `tool_use` blocks of `assistant` records, merged into one
 turn per reply. Each `tool_use` becomes one line (`[Bash] <description>`, `[Edit] <path>`).
-Dropped: tool results, `thinking` blocks, `isSidechain` (subagent) records, and every
-non-message record type. Credential-looking strings are masked before output.
+Each of Claude's turns gets a `usage:` line (API calls, input tokens with the cached share,
+output tokens, and `≈$` when a `cost-state` record exists) from the `message.usage` blocks
+counted once per `message.id`; the header carries the model, total tokens, the cost line
+and the span in days. Dropped: tool results, `thinking` blocks, `isSidechain` (subagent)
+records, and every non-message record type. Credential-looking strings are masked before
+output.

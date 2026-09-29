@@ -57,7 +57,7 @@ Pick a section (or just say what you want; you are not stuck in a mode):
   3. Find it by project or time    "acctz-app last week", "everything this month"
   4. Sessions in this directory    what have I done in this repo?
   5. What did it end on?           the final turns without opening it
-  6. Summarize it to a file        topics, decisions, action items, open questions
+  6. Summarize it                  brief or full, on screen or to a file, with cost
   7. Resuming, three ways          --continue, --resume, the picker, and forking
   8. Sessions still running        why the finder warns you, and what to do
   9. Name sessions so you find them later    /rename and claude -n
@@ -183,19 +183,36 @@ real last conversation, so "last active" does not mislead you.
 
 ---
 
-## Section 6: Summarize it to a file
+## Section 6: Summarize it
 
-**Explain:** A transcript is not something you hand to a colleague. The summarize skill
-reads one session and writes a markdown document organised by discussion topic: a short
-summary, then for each topic what was discussed, what was decided and where it ended,
-then action items, open questions, threads that were started and dropped, the files that
-were edited, and a condensed transcript at the back. Before writing it asks where the file
-goes (the current directory by default) and whether you want the transcript appendix.
+**Explain:** A transcript is not something you hand to a colleague, and it is not
+something you want to reread either. The summarize skill reads one session and gives it
+back at one of two depths. **Brief** is a screenful: what the session was about, what was
+decided, what is still to do, what was left open or dropped, and what it cost, as one
+bullet list across every topic, then one line per topic. **Full** is the document: for
+each topic what was discussed, what was decided and where it ended, then action items,
+open questions, dangling threads, a cost table per topic, the files that were edited, and
+a condensed transcript at the back. Either depth can go on screen or into a markdown file,
+or both (brief now, full to a file). It asks which you want unless your question already
+said, and you can answer in your own words.
+
+Cost comes from Claude Code's own record for the session, always shown as a total; the
+split per topic is an estimate from each turn's tokens. A session that is still running
+has no cost record yet, so you get token counts until it exits.
+
+A session that ran over several days is flagged before anything is written, because it
+usually covers unrelated topics: brief reads as a list, full gets long. Brief is the
+better first ask for one of those.
+
 Things that look like pasted credentials (API keys, tokens, passwords in `.env` or JSON
 form) are masked before Claude reads the transcript. The masking is pattern-based, so it
 can miss an unusual format; Claude is told to flag anything that slipped through.
 
 **Prompt: type into Claude Code**
+```
+quick recap of the story-1 session
+```
+The full write-up, to a file:
 ```
 summarize the story-1 session to a markdown file
 ```
@@ -203,14 +220,20 @@ Just the parts you need, in chat:
 ```
 what were the action items and open questions from yesterday's acctz-app session?
 ```
+What it cost, and where the money went:
+```
+how much did yesterday's acctz-app session cost, and what was the expensive part?
+```
 Keep one that is about to be cleaned up:
 ```
 that session is nearly 30 days old, write it up so I don't lose it
 ```
 
-**Expect:** a one-line confirmation of which session it picked, a picker for the location
-and the appendix, then the path of the written file in a code block, with how many topics,
-action items and open questions it found. The document is the durable copy; it carries the
+**Expect:** a one-line confirmation of which session it picked, with a warning if it spans
+several days; a picker for depth and destination when your question left them open (and
+the appendix, for a full write-up to a file); then either the summary on screen or the
+path of the written file in a code block, with how many topics, action items and open
+questions it found and the total cost. A file is the durable copy; it carries the
 resume command so you can get back into the live session while it still exists.
 
 ---
@@ -355,8 +378,8 @@ Cheat sheet:
 | `list --json` | machine-readable, for jq or scripts |
 | `list --no-redact` / `show <id> --no-redact` | show prompts and replies as typed, credentials unmasked |
 | `show <id> --tail 6` | final turns of one session |
-| `dump <id> --out <file>` | clean, numbered transcript (what summarize reads); `--no-redact` to leave credentials unmasked |
-| `dump <id> --stats` | how big a dump would be, with part ranges for big sessions |
+| `dump <id> --out <file>` | clean, numbered transcript (what summarize reads), with tokens and estimated cost on each of Claude's turns; `--no-redact` to leave credentials unmasked |
+| `dump <id> --stats` | dates, span in days, recorded cost and how big a dump would be, with part ranges for big sessions |
 | `copy <id>` | put that session's resume command on the clipboard |
 | `doctor` | check Python, Claude Code, the session store and clipboard; says what to install, installs nothing |
 

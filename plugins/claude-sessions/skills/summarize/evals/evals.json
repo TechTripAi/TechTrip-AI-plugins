@@ -4,25 +4,37 @@
     {
       "id": 1,
       "prompt": "summarize the story-1 session in acctz-app to a markdown file in this directory",
-      "expected_output": "Identifies the single session titled story-1 in the acctz-app directory and confirms it in one line. Runs the dump subcommand with --stats and then --out into the scratchpad, reads the dump, does not ask where to write because the prompt already said this directory (confirms it in one line with the proposed filename), asks with AskUserQuestion only which appendix to include, then writes a markdown file organised by discussion topic with Summary, Topics (each with what was discussed, decisions, state at the end), Action items, Open questions, Dangling threads, Files edited and the chosen transcript appendix. Reports the path in a code block on its own line with counts of topics, action items and open questions.",
+      "expected_output": "Identifies the single session titled story-1 in the acctz-app directory, runs dump --stats, and confirms the pick in one line with its dates. Does not ask where to write because the prompt said this directory (confirms it with the proposed filename). Asks with AskUserQuestion only what is open: depth (brief, full, both) and, for full, which appendix. Dumps with --out into the scratchpad, reads it, works out topics with turn ranges and sums the per-turn ≈$ figures into a Cost table with the session total, then writes the file: header table with the cost row, Summary, Topics (discussed, decisions, state at the end, cost), Action items, Open questions, Dangling threads, Cost, Files edited and the chosen appendix. Reports the path in a code block on its own line with counts of topics, action items and open questions and the total cost.",
       "files": []
     },
     {
       "id": 2,
-      "prompt": "what were the action items and open questions from the session where I asked about the migration plan?",
-      "expected_output": "Uses list --grep to find the session, confirms it, dumps it, and answers in chat with the action items and open questions drawn from the transcript, attributing each to a topic and marking anything that was proposed but not agreed. Offers to write the full summary to a file rather than writing one unasked.",
+      "prompt": "quick recap of the session where I asked about the migration plan",
+      "expected_output": "Uses list --grep to find the session and confirms it. Reads 'quick recap' as brief and, with no file mentioned, prints the brief summary on screen without asking about a file: header table with the cost row, an 'In short' bullet list across topics (about, decided, to do, open, dropped, cost) and one line per topic with its turn range and ≈$ figure. Closes with one line offering the full write-up or a file. Writes nothing.",
       "files": []
     },
     {
       "id": 3,
       "prompt": "this session is about to get cleaned up, write it up so I don't lose it: /Users/trip/workspace-acctz session from three weeks ago",
-      "expected_output": "Finds the session in that directory from about three weeks ago, mentions the 30-day cleanupPeriodDays retention and that the summary becomes the durable copy, asks location and appendix via AskUserQuestion, writes the document with the condensed transcript appendix, and reports the path. The header table carries the full session id and full directory, the resume command is the full 'cd <dir> && claude --resume <id>' form, and the Files edited section lists complete paths; nothing copyable is shortened with an ellipsis.",
+      "expected_output": "Finds the session in that directory from about three weeks ago, mentions the 30-day cleanupPeriodDays retention and that a file summary becomes the durable copy. Reads 'write it up so I don't lose it' as full to a file, asks location and appendix via AskUserQuestion, writes the document with the condensed transcript appendix, and reports the path. The header table carries the full session id and full directory, the resume command is the full 'cd <dir> && claude --resume <id>' form, and the Files edited section lists complete paths; nothing copyable is shortened with an ellipsis.",
       "files": []
     },
     {
       "id": 4,
-      "prompt": "summarize the session I'm in right now to a file",
-      "expected_output": "Resolves 'this session' to the one marked running in the current directory, notes that the summary covers turns completed so far, dumps it, asks location and appendix, writes the file and reports the path.",
+      "prompt": "summarize the session I'm in right now",
+      "expected_output": "Resolves 'this session' to the one marked running in the current directory, notes that the summary covers turns completed so far. dump --stats shows no cost recorded, so the summary gives tokens per topic instead of dollars, says the cost is recorded when the session exits, and never invents a dollar figure. Asks depth and destination with AskUserQuestion since the prompt left both open.",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "summarize the techtrip-claude-plugins session that started last Thursday",
+      "expected_output": "Finds the session, runs dump --stats, sees that the when line says it spans several days and probably covers several unrelated topics, and repeats that warning in the confirmation: brief will read as a list of loosely related items, full will be long. Asks depth and destination with AskUserQuestion, recommending brief. Accepts an answer like 'both, file in ~/temp' even though it was not an option, prints brief on screen and writes full to the named directory.",
+      "files": []
+    },
+    {
+      "id": 6,
+      "prompt": "how much did the acctz-app session from yesterday cost, and what was the expensive part?",
+      "expected_output": "Finds the session, dumps it, and answers on screen with the recorded total from the dump header and a short per-topic cost table summed from the per-turn ≈$ figures, naming the biggest topic. States that the total is Claude Code's record and the split by topic is an estimate from token weight. Does not write a file.",
       "files": []
     }
   ]

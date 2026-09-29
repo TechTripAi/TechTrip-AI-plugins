@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.5.0 - 2026-09-28
+
+- **summarize has two depths and two destinations.** *Brief* is a screenful: one bullet
+  list across topics (about, decided, to do, open, dropped, cost) and one line per topic.
+  *Full* is the topic-by-topic document from 0.3.0. Either goes on screen, to a markdown
+  file, or both (brief now, full to a file). The skill infers depth and destination from
+  the wording ("quick recap" is brief, "write it up" is full, "to a file" is a file) and
+  asks only what is left open; the user can answer in their own words. Full on screen
+  gets no transcript appendix.
+- **Multi-day sessions are flagged before anything is written.** `dump --stats` now
+  prints the session's dates and, when it spans more than one day, says it probably
+  covers several unrelated topics; the skill repeats that in its confirmation and
+  recommends brief.
+- **Cost, total and per topic.** `dump` prints a `usage:` line on each of Claude's turns
+  (API calls, input tokens with the cached share, output tokens) and, when Claude Code
+  has written the session's cost record, an estimated `≈$` for the turn: the recorded
+  total split by each turn's share of token weight. The header carries the model, total
+  tokens and a `cost:` line. The summary always shows the recorded total and adds a cost
+  table per topic (tokens per topic when there is no cost record yet, which is the case
+  while a session is still running). One API reply is stored as several assistant
+  records repeating the same usage, so usage is counted once per `message.id`.
+- **brain-dump** section 6 covers the depths, destinations and cost; README and the
+  reference doc updated.
+
 ## 0.4.0 - 2026-09-28
 
 - **Reads agent view.** Which sessions are live now comes from `claude agents --json`,

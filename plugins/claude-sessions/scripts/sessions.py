@@ -996,6 +996,53 @@ def format_tool(tool: Dict[str, Any], redacting: bool) -> Tuple[str, int]:
     return (f"[{tool['name']}] {desc}" if desc else f"[{tool['name']}]"), k
 
 
+_USAGE_KEYS = ("calls", "in", "cache_w", "cache_r", "out")
+
+# Relative price of each token kind against a plain input token, the same ratio across
+# Anthropic's models (cache write 1.25x, cache read 0.1x, output 5x). Used only to split a
+# session's recorded total cost across its turns; it never produces a dollar figure on its own.
+_TOKEN_WEIGHT = {"in": 1.0, "cache_w": 1.25, "cache_r": 0.1, "out": 5.0}
+
+
+def empty_usage() -> Dict[str, int]:
+    return {k: 0 for k in _USAGE_KEYS}
+
+
+def add_usage(into: Dict[str, int], u: Any) -> None:
+    """Fold one API message's `usage` block into a running total."""
+    if not isinstance(u, dict):
+        return
+    into["calls"] += 1
+    into["in"] += int(u.get("input_tokens") or 0)
+    into["cache_w"] += int(u.get("cache_creation_input_tokens") or 0)
+    into["cache_r"] += int(u.get("cache_read_input_tokens") or 0)
+    into["out"] += int(u.get("output_tokens") or 0)
+
+
+def token_weight(u: Dict[str, int]) -> float:
+    return sum(u[k] * w for k, w in _TOKEN_WEIGHT.items())
+
+
+def fmt_tokens(n: int) -> str:
+    if n < 1000:
+        return str(n)
+    if n < 1000000:
+        return f"{n / 1000:.1f}".rstrip("0").rstrip(".") + "K"
+    return f"{n / 1000000:.2f}".rstrip("0").rstrip(".") + "M"
+
+
+def usage_line(u: Dict[str, int], cost: Optional[float]) -> str:
+    """One dump line: how much this turn cost in tokens, and in dollars when the session has a cost record."""
+    context = u["in"] + u["cache_w"] + u["cache_r"]
+    cached = u["cache_r"]
+    parts = [f"{u['calls']} call{'s' if u['calls'] != 1 else ''}",
+             f"in {fmt_tokens(context)}" + (f" ({fmt_tokens(cached)} cache reads)" if cached else ""),
+             f"out {fmt_tokens(u['out'])}"]
+    if cost is not None:
+        parts.append(f"≈${cost:.2f}" if cost >= 0.005 else "<$0.01")
+    return ", ".join(parts)
+
+
 def read_turns(path: str) -> List[Dict[str, Any]]:
     """The conversation as ordered turns: your prompts, Claude's text, and one entry per tool call.
 
@@ -1003,13 +1050,19 @@ def read_turns(path: str) -> List[Dict[str, Any]]:
     assistant records (text, then tool calls, then more text) are merged into one turn.
     Background task notifications become a note inside Claude's turn, and an interruption
     closes the turn so the reply after it starts a new one.
+
+    Each Claude turn also carries `usage` (API calls and tokens) and the models seen. One
+    API reply is written as several assistant records (one per content block) that repeat
+    the same `message.id` and the same usage block, so usage is counted once per id.
     """
     turns: List[Dict[str, Any]] = []
+    seen_msg_ids: set = set()
 
     def claude_turn(ts: Optional[float]) -> Dict[str, Any]:
         if turns and turns[-1]["who"] == "claude" and not turns[-1].get("closed"):
             return turns[-1]
-        turns.append({"ts": ts, "who": "claude", "text": "", "tools": [], "files": [], "ts_end": ts})
+        turns.append({"ts": ts, "who": "claude", "text": "", "tools": [], "files": [], "ts_end": ts,
+                      "usage": empty_usage(), "models": []})
         return turns[-1]
 
     with open(path, encoding="utf-8", errors="replace") as fh:
@@ -1067,8 +1120,24 @@ def read_turns(path: str) -> List[Dict[str, Any]]:
                             if name in _EDIT_TOOLS and desc:
                                 files.append(desc)
                 if not texts and not tools:
+                    # thinking-only record: keep its usage if a Claude turn is open, else it will
+                    # be counted from the sibling record that carries the text
+                    if turns and turns[-1]["who"] == "claude" and not turns[-1].get("closed"):
+                        cur = turns[-1]
+                    else:
+                        continue
+                else:
+                    cur = claude_turn(ts)
+                mid = msg.get("id")
+                if mid not in seen_msg_ids:
+                    if mid:
+                        seen_msg_ids.add(mid)
+                    add_usage(cur["usage"], msg.get("usage"))
+                    model = msg.get("model")
+                    if isinstance(model, str) and model not in cur["models"]:
+                        cur["models"].append(model)
+                if not texts and not tools:
                     continue
-                cur = claude_turn(ts)
                 if texts:
                     cur["text"] = (cur["text"] + "\n\n" + "\n\n".join(texts)).strip()
                 cur["tools"].extend(tools)
@@ -1096,21 +1165,51 @@ def run_dump(sessions: List[Dict[str, Any]], args: argparse.Namespace) -> None:
             if p not in files_touched:
                 files_touched.append(p)
 
+    # Token usage per turn, and the session's recorded cost split across turns by token weight.
+    usage_total = empty_usage()
+    models: List[str] = []
+    for tr in turns:
+        if tr["who"] == "claude":
+            for k in _USAGE_KEYS:
+                usage_total[k] += tr["usage"][k]
+            for m in tr["models"]:
+                if m not in models:
+                    models.append(m)
+    weight_total = sum(token_weight(tr["usage"]) for tr in turns if tr["who"] == "claude")
+    cost_usd = s["cost_usd"]
+    turn_cost: Dict[int, float] = {}
+    if cost_usd and weight_total > 0:
+        for i, tr in enumerate(turns, 1):
+            if tr["who"] == "claude":
+                turn_cost[i] = cost_usd * token_weight(tr["usage"]) / weight_total
+    conv_end = s["last_prompt_at"] if s.get("reopened_only") and s.get("last_prompt_at") else s["last_active"]
+    span_days = 0
+    if s["started_at"] and conv_end:
+        span_days = (datetime.fromtimestamp(conv_end).date() - datetime.fromtimestamp(s["started_at"]).date()).days
+
     redactions = 0
     head: List[str] = []
     head.append(f"# Session {s['session_id']}")
     head.append(f"title:        {s['title']}")
     head.append(f"dir:          {s['cwd'] or '?'}" + (f"   branch: {s['branch']}" if s["branch"] and s["branch"] != "HEAD" else ""))
-    head.append(f"started:      {local_stamp(s['started_at'])}   last active: {local_stamp(s['last_active'])}")
+    head.append(f"started:      {local_stamp(s['started_at'])}   last active: {local_stamp(s['last_active'])}"
+                + (f"   (spans {span_days + 1} days)" if span_days >= 1 else ""))
     if s.get("reopened_only"):
         head.append(f"note:         last real conversation {local_stamp(s['last_prompt_at'])}; later activity was only reopening and exiting")
     head.append(f"status:       {s['status']}")
     extras = [f"{s['prompt_count']} prompts", f"{total} turns"]
     if s["subagent_count"]:
         extras.append(f"{s['subagent_count']} subagents")
-    if s["cost_usd"]:
-        extras.append(f"${s['cost_usd']:.2f}")
     head.append(f"size:         {', '.join(extras)}, transcript {s['size_bytes'] // 1024} KB")
+    if usage_total["calls"]:
+        head.append(f"model:        {', '.join(models) if models else '?'}")
+        head.append(f"tokens:       {usage_line(usage_total, None)}")
+    if cost_usd:
+        head.append(f"cost:         ${cost_usd:.2f} total, from Claude Code's cost record; the ≈$ figure on each of "
+                    f"Claude's turns is that total split by the turn's share of token weight (an estimate)")
+    else:
+        head.append("cost:         not recorded yet; Claude Code writes the cost record when the session exits, "
+                    "so only token counts are shown per turn")
     head.append(f"resume:       {s['resume_command']}")
     if s.get("resume_alt"):
         head.append(f"or:           {s['resume_alt']}")
@@ -1132,6 +1231,8 @@ def run_dump(sessions: List[Dict[str, Any]], args: argparse.Namespace) -> None:
         if args.max_chars and len(text) > args.max_chars:
             text = text[: args.max_chars] + f"\n… [{len(text) - args.max_chars} more chars trimmed]"
         out.append(f"### {i}. [{local_stamp(tr['ts'])}] {tr['who']}")
+        if tr["who"] == "claude" and tr["usage"]["calls"]:
+            out.append(f"    usage: {usage_line(tr['usage'], turn_cost.get(i))}")
         if tr["tools"] and not args.no_tools:
             for tool in tr["tools"][:25]:
                 tl, k = format_tool(tool, redacting)
@@ -1153,6 +1254,9 @@ def run_dump(sessions: List[Dict[str, Any]], args: argparse.Namespace) -> None:
     if args.stats:
         print(f"session:  {s['session_id']}   {s['title']}")
         print(f"dir:      {s['cwd']}")
+        print(f"when:     {local_stamp(s['started_at'])} to {local_stamp(conv_end)}"
+              + (f"; spans {span_days + 1} days, so it probably covers several unrelated topics" if span_days >= 1 else ""))
+        print(f"cost:     ${cost_usd:.2f} recorded" if cost_usd else "cost:     not recorded yet (written when the session exits); tokens only")
         print(stats)
         if chars > DUMP_PART_CHARS:
             step = max(5, int(total * DUMP_PART_CHARS / chars))

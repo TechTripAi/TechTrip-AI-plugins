@@ -141,6 +141,11 @@ with argparse subcommands `list` (default when only flags are given; `main()` pr
   via `tool_desc()` / `format_tool()` (paths and URLs in full, other descriptions trimmed).
   Non-human user records (`origin.kind` other than `human`, e.g. task notifications) become
   a `background task` note in Claude's turn; `[Request interrupted` closes the turn.
+  Each Claude turn also accumulates `usage` (calls and tokens) from `message.usage`, counted
+  once per `message.id` because one API reply is stored as several records that repeat the
+  same usage; `run_dump` splits the session's `cost_usd` (from the `cost-state` record,
+  absent while a session runs) across turns by `token_weight()` and prints a `usage:` line
+  per turn, which is what the summarize skill sums into its per-topic cost table.
   `redact()` masks credential-looking strings (`_SECRET_PATTERNS`; the key=value patterns
   allow any prefix such as `DATABASE_PASSWORD`, and must not re-match an inserted
   `[REDACTED` marker). Redaction runs before any trimming so a key is never cut in half.

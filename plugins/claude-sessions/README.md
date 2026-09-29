@@ -12,16 +12,21 @@ already writes and answers questions like:
 - "I closed claude by mistake, where was I?"
 - "Which session did I ask about the migration plan in?"
 - "List the sessions I've had in this directory and what each ended on."
+- "Quick recap of the story-1 session."
 - "Summarize the story-1 session to a markdown file, with the action items and open questions."
+- "How much did yesterday's acctz-app session cost, and what was the expensive part?"
 
 For each match you get the directory, session id, status, last active time, the last thing
 you said, Claude's last reply, and a copy-paste resume command. Sessions still running in
 another terminal are flagged so you do not fork them by accident, with the same icons,
 state words and grouping as Claude Code's agent view (`claude agents`): agent view is
 the screen for what is running now, this plugin is for everything that has ever run and
-what was said in it. A summary is a markdown
-file organised by discussion topic: summary, decisions, action items, open questions,
-dangling threads, files edited, and a condensed transcript.
+what was said in it. A summary comes at two depths, on screen or as a markdown file:
+brief is one bullet list across topics (about, decided, to do, open, dropped, cost) plus a
+line per topic; full is organised by topic with summary, decisions, action items, open
+questions, dangling threads, a cost table per topic, files edited, and a condensed
+transcript. Cost is Claude Code's own record for the session, split across topics by
+token usage.
 
 ## Install
 
@@ -66,7 +71,9 @@ use `py -3` instead of `python3`.
 | The banner plus your 10 most recent sessions | `/claude-sessions:find` |
 | Just ask | "where was I yesterday in the acctz-app repo?" triggers the finder on its own |
 | Sessions in the current directory | "list the sessions I've had in here" |
-| A session written up as markdown | "summarize that session to a file", or `/claude-sessions:summarize` |
+| A session summarised on screen | "quick recap of that session", or `/claude-sessions:summarize` |
+| A session written up as markdown | "summarize that session to a file" |
+| What a session cost, by topic | "how much did that session cost, and what was the expensive part?" |
 | The resume command on your clipboard | "copy the resume command for that one", or `copy <id>` from a terminal |
 | Run the script yourself | `python3 <plugin>/scripts/sessions.py --help` |
 | Check the machine can run it | "check that the session tools can run here", or `doctor` from a terminal (see First run) |
@@ -79,8 +86,10 @@ use `py -3` instead of `python3`.
   agent view: `✽ working`, `✻ running`, `∙ exited`, `! crashed`, `∙ closed`; `list --table`
   groups rows under Working, Running, Needs attention and Closed (`--group-by dir` for
   directories, `--group-by none` for one flat table).
-- `summarize`: write one session up as a markdown file. Asks where to put it (current
-  directory by default) and whether to include the condensed transcript before writing.
+- `summarize`: one session, brief or full, on screen or as a markdown file (or both). Asks
+  depth and destination when the request leaves them open, warns first when a session
+  spans several days and mixes topics, and only writes where you say. Shows the session's
+  recorded cost and an estimated split per topic.
 - `brain-dump`: the teacher. A menu-driven tour that hands you the exact prompts to type. It
   never runs anything for you.
 
