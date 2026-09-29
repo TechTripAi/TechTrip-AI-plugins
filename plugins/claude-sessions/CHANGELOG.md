@@ -2,17 +2,25 @@
 
 ## 0.5.0 - 2026-09-28
 
-- **summarize has two depths and two destinations.** *Brief* is a screenful: one bullet
-  list across topics (about, decided, to do, open, dropped, cost) and one line per topic.
-  *Full* is the topic-by-topic document from 0.3.0. Either goes on screen, to a markdown
-  file, or both (brief now, full to a file). The skill infers depth and destination from
-  the wording ("quick recap" is brief, "write it up" is full, "to a file" is a file) and
-  asks only what is left open; the user can answer in their own words. Full on screen
-  gets no transcript appendix.
+- **summarize reads like a colleague's account, in five fixed sections.** Every summary
+  has the same sections in the same order: the header with the resume command, *What
+  happened* (a few paragraphs of prose in the order the conversation went, decisions and
+  their reasons inside the story, the user quoted when the wording matters), *Where it
+  stands*, *Your next steps* (numbered, with commands) and *Cost*. That is *brief*, a
+  screenful. *Full* keeps those and adds a section per thread, a cost table per thread,
+  files edited and the transcript appendix. The labelled section lists of 0.3.0
+  (decisions, action items, open questions, dangling threads) are gone; their content
+  lives in the prose.
+- **Two destinations.** Either depth goes on screen, to a markdown file, or both (brief
+  now, full to a file). The skill infers depth and destination from the wording ("quick
+  recap" is brief, "write it up" is full, "to a file" is a file) and asks only what is
+  left open; the user can answer in their own words. Full on screen gets no transcript
+  appendix.
 - **Multi-day sessions are flagged before anything is written.** `dump --stats` now
-  prints the session's dates and, when it spans more than one day, says it probably
-  covers several unrelated topics; the skill repeats that in its confirmation and
-  recommends brief.
+  prints the session's dates, first prompt to last prompt (a session left open or
+  reopened later is not counted as longer than the conversation was), and when it spans
+  more than one day says it probably covers several unrelated topics; the skill repeats
+  that in its confirmation and recommends brief.
 - **Cost, total and per topic.** `dump` prints a `usage:` line on each of Claude's turns
   (API calls, input tokens with the cached share, output tokens) and, when Claude Code
   has written the session's cost record, an estimated `≈$` for the turn: the recorded

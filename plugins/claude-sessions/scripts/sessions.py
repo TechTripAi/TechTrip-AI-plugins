@@ -1182,7 +1182,9 @@ def run_dump(sessions: List[Dict[str, Any]], args: argparse.Namespace) -> None:
         for i, tr in enumerate(turns, 1):
             if tr["who"] == "claude":
                 turn_cost[i] = cost_usd * token_weight(tr["usage"]) / weight_total
-    conv_end = s["last_prompt_at"] if s.get("reopened_only") and s.get("last_prompt_at") else s["last_active"]
+    # The conversation ends at the last real prompt, not at the last file activity: a session left
+    # open (or reopened and exited) keeps being touched long after anyone typed into it.
+    conv_end = s.get("last_prompt_at") or s["last_active"]
     span_days = 0
     if s["started_at"] and conv_end:
         span_days = (datetime.fromtimestamp(conv_end).date() - datetime.fromtimestamp(s["started_at"]).date()).days

@@ -57,7 +57,7 @@ Pick a section (or just say what you want; you are not stuck in a mode):
   3. Find it by project or time    "acctz-app last week", "everything this month"
   4. Sessions in this directory    what have I done in this repo?
   5. What did it end on?           the final turns without opening it
-  6. Summarize it                  brief or full, on screen or to a file, with cost
+  6. Summarize it                  what happened, where it stands, your next steps, cost
   7. Resuming, three ways          --continue, --resume, the picker, and forking
   8. Sessions still running        why the finder warns you, and what to do
   9. Name sessions so you find them later    /rename and claude -n
@@ -186,23 +186,24 @@ real last conversation, so "last active" does not mislead you.
 ## Section 6: Summarize it
 
 **Explain:** A transcript is not something you hand to a colleague, and it is not
-something you want to reread either. The summarize skill reads one session and gives it
-back at one of two depths. **Brief** is a screenful: what the session was about, what was
-decided, what is still to do, what was left open or dropped, and what it cost, as one
-bullet list across every topic, then one line per topic. **Full** is the document: for
-each topic what was discussed, what was decided and where it ended, then action items,
-open questions, dangling threads, a cost table per topic, the files that were edited, and
-a condensed transcript at the back. Either depth can go on screen or into a markdown file,
-or both (brief now, full to a file). It asks which you want unless your question already
-said, and you can answer in your own words.
+something you want to reread either. The summarize skill reads one session and tells it
+back the way a colleague who sat through it would: the same five sections every time, in
+the same order. A header with the resume command; *What happened*, a few paragraphs of
+plain prose in the order the conversation went, with the decisions and their reasons
+inside the story; *Where it stands*; *Your next steps*, a numbered list with the commands;
+and *Cost*. That is **brief**, a screenful. **Full** keeps those five and adds a section
+per thread, a cost table per thread, the files that were edited, and a condensed
+transcript at the back. Either depth can go on screen or into a markdown file, or both
+(brief now, full to a file). It asks which you want unless your question already said,
+and you can answer in your own words.
 
 Cost comes from Claude Code's own record for the session, always shown as a total; the
 split per topic is an estimate from each turn's tokens. A session that is still running
 has no cost record yet, so you get token counts until it exits.
 
 A session that ran over several days is flagged before anything is written, because it
-usually covers unrelated topics: brief reads as a list, full gets long. Brief is the
-better first ask for one of those.
+usually covers unrelated topics: brief becomes a longer story, full gets long. Brief is
+the better first ask for one of those.
 
 Things that look like pasted credentials (API keys, tokens, passwords in `.env` or JSON
 form) are masked before Claude reads the transcript. The masking is pattern-based, so it
@@ -232,8 +233,8 @@ that session is nearly 30 days old, write it up so I don't lose it
 **Expect:** a one-line confirmation of which session it picked, with a warning if it spans
 several days; a picker for depth and destination when your question left them open (and
 the appendix, for a full write-up to a file); then either the summary on screen or the
-path of the written file in a code block, with how many topics, action items and open
-questions it found and the total cost. A file is the durable copy; it carries the
+path of the written file in a code block, with how many threads and next steps it found
+and the total cost. A file is the durable copy; it carries the
 resume command so you can get back into the live session while it still exists.
 
 ---

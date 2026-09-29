@@ -1,17 +1,16 @@
 ---
 name: summarize
-description: Summarize one past Claude Code session, on screen or as a markdown file, at two depths. Brief is a bullet list that cuts across topics (what it was about, decisions, action items, open questions, dangling threads, cost) with one line per topic; full is the document organised topic by topic with a summary, decisions, action items, open questions, threads left dangling, files edited, a cost breakdown per topic, and a condensed transcript. Use this whenever the user wants a session summarised, recapped, written up, exported as notes, turned into a handoff or status document, or mined for its action items, open questions or cost ("summarize that session", "quick recap of yesterday's acctz-app session", "what happened in the session where I asked about X", "what were the action items from the story-1 session", "how much did that session cost", "export the session to markdown", "make notes from that conversation", "write it up so I don't lose it"). Asks depth and destination when the request leaves them open, warns when a session ran over several days and mixes topics, and writes a file only where the user says. Part of the claude-sessions plugin; the find skill locates the session, brain-dump is the guided tour.
+description: Summarize one past Claude Code session the way a colleague would tell you about it, on screen or as a markdown file, at two depths. Brief is a short conversational write-up in five fixed sections (what happened, where it stands, your next steps, cost, plus the header with the resume command); full adds a section per topic, a cost table, files edited and a condensed transcript. Use this whenever the user wants a session summarised, recapped, written up, exported as notes, turned into a handoff or status document, or mined for its next steps, open questions or cost ("summarize that session", "quick recap of yesterday's acctz-app session", "what happened in the session where I asked about X", "what were the action items from the story-1 session", "how much did that session cost", "export the session to markdown", "make notes from that conversation", "write it up so I don't lose it"). Asks depth and destination when the request leaves them open, warns when a session ran over several days and mixes topics, and writes a file only where the user says. Part of the claude-sessions plugin; the find skill locates the session, brain-dump is the guided tour.
 ---
 
 # claude-sessions: summarize
 
 A session transcript is a JSONL file full of tool output and machinery. This skill turns
-one into something a person can read: at the brief depth, a screenful of bullets that says
-what the session was about, what was decided, what is still owed and what it cost; at the
-full depth, a document organised by topic with a condensed record of the conversation. It
-is the answer to "what did we do in there", "I need to hand this off", "what did we
-agree", "what did that cost me", and "this session is about to be cleaned up and I want
-to keep it".
+one into what a colleague who sat through the session would tell you afterwards: what
+happened, in order, in plain prose; where things stand; what is yours to do next; and
+what it cost. It is the answer to "what did we do in there", "I need to hand this off",
+"what did we agree", "what did that cost me", and "this session is about to be cleaned
+up and I want to keep it".
 
 The script is shared by every skill in this plugin, at `scripts/sessions.py` in the
 plugin root, two directories above this skill's base directory:
@@ -25,15 +24,17 @@ rules: say what to install, never install it.
 
 ## The two depths and the two destinations
 
-**Brief** is a bullet list, read in a minute. Header table, then one list that cuts across
-topics (what the session was about, decisions, action items, open questions, dangling
-threads, what it cost), then one line per topic. It is what most people want when they say
-"summarize" and what a long multi-topic session needs, because a topical write-up of a
-four-day session runs to pages.
+Both depths use the same five sections, in the same order, every time: the header, *What
+happened*, *Where it stands*, *Your next steps*, *Cost*. The reader always knows where to
+look.
 
-**Full** is the document: the same header, a prose summary, then each topic in turn
-(discussed, decided, state at the end, cost), then action items, open questions, dangling
-threads, files edited, the cost table, and the transcript appendix the user chose.
+**Brief** is those five sections and nothing else: a screenful, read in a minute. It is
+what most people want when they say "summarize", and what a long multi-topic session
+needs, because a topic-by-topic write-up of a four-day session runs to pages.
+
+**Full** is the same five sections, then depth: one section per topic in the same
+conversational voice, a cost table, the files edited, and the transcript appendix the
+user chose. Full is brief plus detail, never a different document.
 
 Either depth goes to the **screen** (printed in chat, nothing written) or to a **file**
 (markdown, at a location the user picks), or both: brief on screen now and full to a
@@ -55,12 +56,13 @@ current directory; say that the summary covers the turns completed so far.
 python3 <skill-dir>/../../scripts/sessions.py dump <id> --stats
 ```
 
-That prints the session's dates, whether a cost was recorded, the turn and character
-counts, and, for a big session, the `--start/--end` parts to dump it in. When the `when:`
-line says `spans N days, so it probably covers several unrelated topics`, repeat that
-warning to the user in the confirmation and say what it means: brief will read as a list of
-loosely related items, full will be long. Suggest brief for a session like that unless
-they want the handoff document.
+That prints the session's dates (first prompt to last prompt, so a session left open or
+reopened later does not count as longer than the conversation was), whether a cost was
+recorded, the turn and character counts, and, for a big session, the `--start/--end`
+parts to dump it in. When the `when:` line says `spans N days, so it probably covers
+several unrelated topics`, repeat that warning to the user in the confirmation and say
+what it means: brief will be a longer story with more threads, full will be long. Suggest
+brief for a session like that unless they want the handoff document.
 
 Then confirm the pick in one line (title, directory, dates, the multi-day warning if any)
 so the user can stop you if it is the wrong session.
@@ -115,10 +117,10 @@ call. Write one file per part instead, using the ranges it printed:
 python3 <skill-dir>/../../scripts/sessions.py dump <id> --start <a> --end <b> --out <scratch-dir>/session-<id8>-part<n>.md
 ```
 
-The dump has a header (title, directory, branch, dates with the span in days, status,
-size, model, total tokens, the cost line, resume commands, the full path of every file
-edited one per line, and the redaction count) and then numbered turns: `### N. [time] you`
-or `### N. [time] claude`. Each of Claude's turns starts with a `usage:` line (API calls,
+The dump has a header (title, directory, branch, dates, status, size, model, total
+tokens, the cost line, resume commands, the full path of every file edited one per line,
+and the redaction count) and then numbered turns: `### N. [time] you` or
+`### N. [time] claude`. Each of Claude's turns starts with a `usage:` line (API calls,
 input tokens with the cached share, output tokens, and `≈$` when the session has a cost
 record), then one `tool:` line per tool call, then Claude's text. Tool output, thinking
 and subagent traffic are not in it. Anything that looks like a credential is already
@@ -126,31 +128,44 @@ masked with `[REDACTED ...]`; keep those markers as they are, and never rerun th
 with `--no-redact` unless the user explicitly asks for the raw text.
 
 Read the scratch file with the Read tool. For a session split into parts, read the parts
-in order and keep running notes per part (topics seen with their turn ranges, decisions,
+in order and keep running notes per part (threads seen with their turn ranges, decisions,
 open items, the `≈$` and token figures per turn) before writing anything; do not try to
 hold a 500 KB session in your head. If a Read call reports the file is too large, fall
 back to its `offset`/`limit` parameters rather than skipping the rest.
 
-### 5. Work out the topics and their cost
+### 5. Work out the threads and their cost
 
-A topic is a thread of work or a question the conversation kept returning to; a two-hour
-session usually has three to eight, a multi-day session more, and some of them unrelated
-to each other. Give each topic the turn numbers it covers (a topic can span several
-ranges when the conversation came back to it). Order topics by how much of the session
-they took, biggest first.
+Before writing, list the threads: each one a piece of work or a question the conversation
+kept returning to, with the turn numbers it covers (a thread can span several ranges
+when the conversation came back to it). A two-hour session usually has three to eight; a
+multi-day session more, some unrelated to each other. Note for each what was decided and
+why, what was left unfinished, and what was asked and never answered. This list is your
+working notes; in brief it is written up as prose, in full each thread also gets its own
+section.
 
-**Cost per topic** is the sum of the `≈$` figures on Claude's turns in that topic's
-ranges; **tokens per topic** the sum of their `in` and `out` counts. The session total is
-the `cost:` line in the header, and it is always shown, whatever the depth. Turns that
-belong to no topic (the opening banner, housekeeping) go on an "other" row so the rows add
-up to the total. Say in the document that per-topic cost is an estimate: Claude Code
-records one total for the session, and the dump splits it across turns by token weight.
-When the header says the cost is `not recorded yet`, give tokens per topic instead and
-say the cost will be recorded when the session exits. Never invent a dollar figure.
+**Cost per thread** is the sum of the `≈$` figures on Claude's turns in that thread's
+ranges; **tokens per thread** the sum of their `in` and `out` counts. The session total
+is the `cost:` line in the header, and it is always shown, whatever the depth. Turns
+that belong to no thread (the opening banner, housekeeping) count as "other" so the parts
+add up to the total. Per-thread cost is an estimate: Claude Code records one total for
+the session, and the dump splits it across turns by token weight; say so wherever a
+per-thread figure appears. When the header says the cost is `not recorded yet`, give
+tokens instead and say the cost will be recorded when the session exits. Never invent a
+dollar figure.
 
 ### 6. Write it
 
-The header table and the resume command are the same at both depths:
+**Voice.** Write to the user, in the second person, as a colleague who watched the
+session would tell it: "You started by asking for X. That turned into Y when Claude
+found Z. You decided A, because B." Plain prose, short paragraphs, past tense. No
+labelled bullets (no "Decided:", "Open:", "Dropped:"), no lists of one-liners standing
+in for sentences. Decisions and their reasons belong inside the story at the point they
+were made, quoting the user's own words when the wording is the decision. The only lists
+are *Your next steps* and, in full, the cost table and files edited.
+
+**Fixed order.** The five sections below appear in this order at both depths, with these
+headings, every time. Full inserts its extra sections after *Where it stands* and after
+*Cost* as shown. Do not add, rename or reorder sections.
 
 ```markdown
 # <Title>
@@ -159,7 +174,7 @@ The header table and the resume command are the same at both depths:
 |---|---|
 | Session | `<full session id>` |
 | Directory | `<full directory path>`, branch <branch> |
-| When | <started> to <last real conversation> (<N> days) |
+| When | <first prompt> to <last prompt>, <duration or N days> |
 | Size | <N prompts>, <N turns>, <tokens in / out> |
 | Cost | $<total> recorded, or "not recorded yet (session still running)" |
 | Status | <exited / crashed / running> |
@@ -168,88 +183,75 @@ The header table and the resume command are the same at both depths:
 Resume it:
 
     cd <full directory path> && claude --resume <full session id>
-```
 
-Always the `--resume <id>` form, taken from the dump's `by id:` line: `--continue` only
-means this session while it is the newest in its directory, and this document outlives
-that. On screen, the header can be the same table; keep it.
+## What happened
 
-#### Brief
+Three to six short paragraphs, in the order the conversation went. One paragraph per
+thread, or per turn of events when one thread dominated. Each paragraph says what the
+user asked, what Claude found or did, and what was decided and why. Quote the user when
+the wording matters. If the session went in circles or a decision was reversed, say so
+plainly; if something is unclear from the transcript, say that instead of guessing. A
+reader who stops here knows the story.
 
-```markdown
-## In short
+## Where it stands
 
-- **About.** One or two bullets: what the session set out to do and where it stopped.
-- **Decided.** One bullet per decision, across all topics, with the reason if one was
-  given. Quote the user when the wording is the decision. "none recorded" if none.
-- **To do.** One bullet per action item, for <you / Claude / a named third party>.
-  Proposals nobody agreed to are marked "(proposed, not agreed)".
-- **Open.** One bullet per unanswered question or deferred decision.
-- **Dropped.** One bullet per thread started and never finished. "none" if none.
-- **Cost.** $<total> across <N> topics; the biggest was <topic> at ≈$<x>. Tokens
-  instead when there is no cost record.
+One paragraph. What is finished, what is half done, what was started and dropped
+without a conclusion, and what was asked and never answered (say who was expected to
+answer, if that was clear). This is where a handoff reader looks first.
 
-## Topics
+## Your next steps
 
-1. **<Topic>** (turns a–b, ≈$x): one line on what happened and where it ended.
-2. **<Topic>** ...
-```
+1. <One action for the user>, with the command in a code block on its own line when
+   there is one.
+2. ...
 
-Keep it to a screen. Twelve to twenty bullets in the first list is the ceiling; if a
-session needs more, that is a sign the user wants full, so say so at the end.
-
-#### Full
-
-```markdown
-## Summary
-
-Three to six sentences: what the session set out to do, what it got done, and where it
-stopped. Someone who reads only this should know whether they need the rest.
-
-## Topics
-
-### 1. <Topic name>  (turns a–b, ≈$x)
-
-**What was discussed.** Two to five sentences.
-
-**Decisions.** Bullets, each one a decision and its reason if one was given. Quote the
-user when the wording is the decision. Write "none recorded" rather than inventing one.
-
-**State at the end.** One or two sentences: done, partly done, parked.
-
-### 2. <Next topic> ...
-
-## Action items
-
-- [ ] <Item>, for <you / Claude / a named third party>, from topic <n>.
-
-Only things the conversation actually committed to or explicitly left for later. If the
-session ended with Claude proposing next steps that nobody agreed to, list them under
-"proposed, not agreed" so they are not mistaken for commitments.
-
-## Open questions
-
-Questions asked and never answered, and decisions explicitly deferred. Say who was
-expected to answer if that was clear.
-
-## Dangling threads
-
-Things that were started and dropped without a conclusion: an investigation abandoned when
-the subject changed, a subtask Claude began and never reported on, a user question that got
-half an answer. This is the section people are most grateful for and the one most
-summaries omit. Empty is fine; say "none".
+Only things the conversation committed to or explicitly left for the user. If Claude
+proposed steps nobody agreed to, add them at the end as one line each, marked
+"(proposed, not agreed)". Omit the section entirely when there is nothing to do.
 
 ## Cost
 
-| Topic | Turns | Tokens in | Tokens out | Cost |
+One or two sentences: the recorded total, and the thread that took most of it with its
+estimated share. Tokens instead when there is no cost record, with a note that the cost
+is recorded when the session exits.
+```
+
+That is the whole brief. In the header's *When* row, a session left open or reopened
+later shows the conversation dates, not the reopen; the dump header's `started:` and the
+stats `when:` line give those.
+
+**Full** adds these, in this position:
+
+```markdown
+## Where it stands
+...
+
+## Threads
+
+### 1. <Thread name>  (turns a–b, ≈$x)
+
+Two to five paragraphs in the same voice: what was discussed, what was decided and why,
+and where it ended (done, partly done, parked). Threads in order of how much of the
+session they took, biggest first.
+
+### 2. <Next thread> ...
+
+## Your next steps
+...
+
+## Cost
+...
+
+| Thread | Turns | Tokens in | Tokens out | Cost |
 |---|---|---|---|---|
-| 1. <Topic> | a–b | 1.2M | 8.4K | ≈$1.10 |
+| 1. <Thread> | a–b | 1.2M | 8.4K | ≈$1.10 |
 | other | ... | ... | ... | ≈$0.05 |
 | **Total** | | | | **$4.12** |
 
-One line under it: the total is what Claude Code recorded for the session; the split by
-topic is an estimate from each turn's share of token weight. Without a cost record, the
-Cost column becomes "not recorded yet" and the token columns carry the comparison.
+One line under the table: the total is what Claude Code recorded for the session; the
+split by thread is an estimate from each turn's share of token weight. Without a cost
+record, the Cost column reads "not recorded yet" and the token columns carry the
+comparison.
 
 ## Files edited
 
@@ -273,12 +275,43 @@ an ellipsis.
 For "prompts only", list just the user turns.
 ```
 
+**A worked example of the voice**, for a short session, so brief and full sound alike:
+
+> ## What happened
+>
+> You opened by asking for a commit with no AI attribution, "that should be a hard
+> rule". There was nothing to commit, and Claude pointed out the rule was already in
+> your global CLAUDE.md, so that turned into a .gitignore for the repo. It took three
+> passes: Claude's first draft, a rewrite to match the secondbrain repo's layout when
+> you asked for that, and the useful extras put back when you said "I didn't mind the
+> extras if they made sense".
+>
+> The bigger thread started when you asked whether having two marketplaces was best
+> practice. Claude said it was not, and recommended one publisher catalog. You went
+> further: "we should probably make techtrip-claude-plugins TechTrip-AI-plugins, that
+> is my identity". Claude renamed every reference locally and left the GitHub rename and
+> the push to you.
+>
+> ## Where it stands
+>
+> The rename is committed locally and the catalog is pushed. Secondbrain and the fork
+> have commits waiting for your push. Nobody answered whether the marketplace id should
+> be lowercase, so the capitals stand.
+>
+> ## Your next steps
+>
+> 1. Push the two product repos:
+>
+>    ```
+>    cd /Users/trip/workspace-ai/techtrip-secondbrain && git push origin main
+>    ```
+
 Rules for the content, at both depths:
 
 - **Faithful over flattering.** If the session went in circles, say so plainly. If a
   decision was reversed later, record the reversal, not just the final state.
 - **Do not fill gaps.** Where the transcript is ambiguous, write "unclear from the
-  transcript" instead of guessing. Never invent an owner for an action item.
+  transcript" instead of guessing. Never invent an owner for a next step.
 - **Secrets.** The dump has masked what looked like credentials. If you see something
   that slipped through (a key, a password, a token in a pasted config), do not copy it
   into the document; write `[redacted]` and tell the user which turn it was in so they can
@@ -296,17 +329,16 @@ On screen, the summary itself is the answer; close with one line offering the ot
 depth or a file ("say the word for the full write-up to a file").
 
 After writing a file, tell the user in a few lines: the path in a code block on its own
-line, the topic count, how many action items and open questions, the total cost, and
-anything you flagged (a possible secret, a part you had to skim, a very long session
-where the appendix was trimmed). Offer to resume the session if they want to pick up an
-action item now.
+line, how many threads and next steps it holds, the total cost, and anything you flagged
+(a possible secret, a part you had to skim, a very long session where the appendix was
+trimmed). Offer to resume the session if they want to pick up a next step now.
 
 If the session has no `/rename` title and the title it shows (Claude Code's generated one,
 which comes from the opening topic) does not match what the session was mostly about,
 suggest a better one in a line, so the session is findable later:
 
 ```
-/rename <short title drawn from the biggest topic>
+/rename <short title drawn from the biggest thread>
 ```
 
 Say it has to be typed inside that session (resume it first); it cannot be set from here.
