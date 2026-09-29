@@ -1,14 +1,14 @@
 ---
 name: summarize
-description: Summarize one past Claude Code session the way a colleague would tell you about it, on screen or as a markdown file, at two depths. Brief is a short conversational write-up in five fixed sections (what happened, where it stands, your next steps, cost, plus the header with the resume command); full adds a section per topic, a cost table, files edited and a condensed transcript. Use this whenever the user wants a session summarised, recapped, written up, exported as notes, turned into a handoff or status document, or mined for its next steps, open questions or cost ("summarize that session", "quick recap of yesterday's acctz-app session", "what happened in the session where I asked about X", "what were the action items from the story-1 session", "how much did that session cost", "export the session to markdown", "make notes from that conversation", "write it up so I don't lose it"). Asks depth and destination when the request leaves them open, warns when a session ran over several days and mixes topics, and writes a file only where the user says. Part of the claude-sessions plugin; the find skill locates the session, brain-dump is the guided tour.
+description: Summarize one past Claude Code session the way a colleague would tell you about it, on screen or as a markdown file, at two depths. Brief is a short conversational write-up in four fixed sections (the header with the resume command, what happened, where it stands, cost); full adds a section per topic, a cost table, files edited and a condensed transcript. Use this whenever the user wants a session summarised, recapped, written up, exported as notes, turned into a handoff or status document, or mined for its decisions, open questions or cost ("summarize that session", "quick recap of yesterday's acctz-app session", "what happened in the session where I asked about X", "what were the action items from the story-1 session", "how much did that session cost", "export the session to markdown", "make notes from that conversation", "write it up so I don't lose it"). Asks depth and destination when the request leaves them open, warns when a session ran over several days and mixes topics, and writes a file only where the user says. Part of the claude-sessions plugin; the find skill locates the session, brain-dump is the guided tour.
 ---
 
 # claude-sessions: summarize
 
 A session transcript is a JSONL file full of tool output and machinery. This skill turns
 one into what a colleague who sat through the session would tell you afterwards: what
-happened, in order, in plain prose; where things stand; what is yours to do next; and
-what it cost. It is the answer to "what did we do in there", "I need to hand this off",
+happened, in order, in plain prose; where things stood when it ended; and what it cost.
+It describes; it never tells you what to do. It is the answer to "what did we do in there", "I need to hand this off",
 "what did we agree", "what did that cost me", and "this session is about to be cleaned
 up and I want to keep it".
 
@@ -24,15 +24,14 @@ rules: say what to install, never install it.
 
 ## The two depths and the two destinations
 
-Both depths use the same five sections, in the same order, every time: the header, *What
-happened*, *Where it stands*, *Your next steps*, *Cost*. The reader always knows where to
-look.
+Both depths use the same four sections, in the same order, every time: the header, *What
+happened*, *Where it stands*, *Cost*. The reader always knows where to look.
 
-**Brief** is those five sections and nothing else: a screenful, read in a minute. It is
+**Brief** is those four sections and nothing else: a screenful, read in a minute. It is
 what most people want when they say "summarize", and what a long multi-topic session
 needs, because a topic-by-topic write-up of a four-day session runs to pages.
 
-**Full** is the same five sections, then depth: one section per topic in the same
+**Full** is the same four sections, then depth: one section per topic in the same
 conversational voice, a cost table, the files edited, and the transcript appendix the
 user chose. Full is brief plus detail, never a different document.
 
@@ -161,9 +160,17 @@ found Z. You decided A, because B." Plain prose, short paragraphs, past tense. N
 labelled bullets (no "Decided:", "Open:", "Dropped:"), no lists of one-liners standing
 in for sentences. Decisions and their reasons belong inside the story at the point they
 were made, quoting the user's own words when the wording is the decision. The only lists
-are *Your next steps* and, in full, the cost table and files edited.
+are, in full, the cost table and files edited.
 
-**Fixed order.** The five sections below appear in this order at both depths, with these
+**Describe, never instruct.** A summary is an account of what happened, not a to-do list.
+Whatever the session left undone is stated as a fact of where things stood when it ended
+("the two product repos were left unpushed", "Claude offered to lowercase the id and you
+did not answer"), never as an instruction to the reader, and never as a checklist. Steps
+Claude proposed that nobody agreed to are reported as proposals. Do not check whether
+the user has since done any of it; the summary is about the session, and its *When* row
+dates it.
+
+**Fixed order.** The four sections below appear in this order at both depths, with these
 headings, every time. Full inserts its extra sections after *Where it stands* and after
 *Cost* as shown. Do not add, rename or reorder sections.
 
@@ -195,19 +202,10 @@ reader who stops here knows the story.
 
 ## Where it stands
 
-One paragraph. What is finished, what is half done, what was started and dropped
-without a conclusion, and what was asked and never answered (say who was expected to
-answer, if that was clear). This is where a handoff reader looks first.
-
-## Your next steps
-
-1. <One action for the user>, with the command in a code block on its own line when
-   there is one.
-2. ...
-
-Only things the conversation committed to or explicitly left for the user. If Claude
-proposed steps nobody agreed to, add them at the end as one line each, marked
-"(proposed, not agreed)". Omit the section entirely when there is nothing to do.
+One paragraph, in the past tense, about the moment the session ended: what was finished,
+what was half done, what was started and dropped without a conclusion, what was left
+with the user, and what was asked and never answered (say who was expected to answer,
+if that was clear). Facts, not instructions. This is where a handoff reader looks first.
 
 ## Cost
 
@@ -235,9 +233,6 @@ and where it ended (done, partly done, parked). Threads in order of how much of 
 session they took, biggest first.
 
 ### 2. <Next thread> ...
-
-## Your next steps
-...
 
 ## Cost
 ...
@@ -294,24 +289,17 @@ For "prompts only", list just the user turns.
 >
 > ## Where it stands
 >
-> The rename is committed locally and the catalog is pushed. Secondbrain and the fork
-> have commits waiting for your push. Nobody answered whether the marketplace id should
-> be lowercase, so the capitals stand.
->
-> ## Your next steps
->
-> 1. Push the two product repos:
->
->    ```
->    cd /Users/trip/workspace-ai/techtrip-secondbrain && git push origin main
->    ```
+> When the session ended the rename was committed locally and the catalog was pushed.
+> Secondbrain and the fork each had commits waiting for you to push. Claude had offered
+> to switch the marketplace id to lowercase and you had not answered, so the capitals
+> stood.
 
 Rules for the content, at both depths:
 
 - **Faithful over flattering.** If the session went in circles, say so plainly. If a
   decision was reversed later, record the reversal, not just the final state.
 - **Do not fill gaps.** Where the transcript is ambiguous, write "unclear from the
-  transcript" instead of guessing. Never invent an owner for a next step.
+  transcript" instead of guessing. Never invent who was expected to do something.
 - **Secrets.** The dump has masked what looked like credentials. If you see something
   that slipped through (a key, a password, a token in a pasted config), do not copy it
   into the document; write `[redacted]` and tell the user which turn it was in so they can
@@ -329,9 +317,9 @@ On screen, the summary itself is the answer; close with one line offering the ot
 depth or a file ("say the word for the full write-up to a file").
 
 After writing a file, tell the user in a few lines: the path in a code block on its own
-line, how many threads and next steps it holds, the total cost, and anything you flagged
+line, how many threads it holds, the total cost, and anything you flagged
 (a possible secret, a part you had to skim, a very long session where the appendix was
-trimmed). Offer to resume the session if they want to pick up a next step now.
+trimmed). Offer to resume the session if they want to pick it up where it stopped.
 
 If the session has no `/rename` title and the title it shows (Claude Code's generated one,
 which comes from the opening topic) does not match what the session was mostly about,

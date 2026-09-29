@@ -57,7 +57,7 @@ Pick a section (or just say what you want; you are not stuck in a mode):
   3. Find it by project or time    "acctz-app last week", "everything this month"
   4. Sessions in this directory    what have I done in this repo?
   5. What did it end on?           the final turns without opening it
-  6. Summarize it                  what happened, where it stands, your next steps, cost
+  6. Summarize it                  what happened, where it stands, what it cost
   7. Resuming, three ways          --continue, --resume, the picker, and forking
   8. Sessions still running        why the finder warns you, and what to do
   9. Name sessions so you find them later    /rename and claude -n
@@ -187,11 +187,11 @@ real last conversation, so "last active" does not mislead you.
 
 **Explain:** A transcript is not something you hand to a colleague, and it is not
 something you want to reread either. The summarize skill reads one session and tells it
-back the way a colleague who sat through it would: the same five sections every time, in
+back the way a colleague who sat through it would: the same four sections every time, in
 the same order. A header with the resume command; *What happened*, a few paragraphs of
 plain prose in the order the conversation went, with the decisions and their reasons
-inside the story; *Where it stands*; *Your next steps*, a numbered list with the commands;
-and *Cost*. That is **brief**, a screenful. **Full** keeps those five and adds a section
+inside the story; *Where it stands*, the state of things when the session ended; and
+*Cost*. It describes, it never hands you a to-do list. That is **brief**, a screenful. **Full** keeps those five and adds a section
 per thread, a cost table per thread, the files that were edited, and a condensed
 transcript at the back. Either depth can go on screen or into a markdown file, or both
 (brief now, full to a file). It asks which you want unless your question already said,
@@ -233,8 +233,8 @@ that session is nearly 30 days old, write it up so I don't lose it
 **Expect:** a one-line confirmation of which session it picked, with a warning if it spans
 several days; a picker for depth and destination when your question left them open (and
 the appendix, for a full write-up to a file); then either the summary on screen or the
-path of the written file in a code block, with how many threads and next steps it found
-and the total cost. A file is the durable copy; it carries the
+path of the written file in a code block, with how many threads it found and the total
+cost. A file is the durable copy; it carries the
 resume command so you can get back into the live session while it still exists.
 
 ---

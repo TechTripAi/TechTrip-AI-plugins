@@ -2,11 +2,12 @@
 
 ## 0.5.0 - 2026-09-28
 
-- **summarize reads like a colleague's account, in five fixed sections.** Every summary
+- **summarize reads like a colleague's account, in four fixed sections.** Every summary
   has the same sections in the same order: the header with the resume command, *What
   happened* (a few paragraphs of prose in the order the conversation went, decisions and
   their reasons inside the story, the user quoted when the wording matters), *Where it
-  stands*, *Your next steps* (numbered, with commands) and *Cost*. That is *brief*, a
+  stands* (the state of things when the session ended, as facts, never as a to-do list)
+  and *Cost*. That is *brief*, a
   screenful. *Full* keeps those and adds a section per thread, a cost table per thread,
   files edited and the transcript appendix. The labelled section lists of 0.3.0
   (decisions, action items, open questions, dangling threads) are gone; their content

@@ -22,9 +22,9 @@ another terminal are flagged so you do not fork them by accident, with the same 
 state words and grouping as Claude Code's agent view (`claude agents`): agent view is
 the screen for what is running now, this plugin is for everything that has ever run and
 what was said in it. A summary reads the way a colleague who sat through the session
-would tell it, in the same five sections every time: a header with the resume command,
+would tell it, in the same four sections every time: a header with the resume command,
 what happened (plain prose, in order, decisions and reasons inside the story), where it
-stands, your next steps, and cost. That is brief, on screen or as a markdown file; full
+stood when the session ended, and cost. It describes; it never hands you a to-do list. That is brief, on screen or as a markdown file; full
 adds a section per thread, a cost table per thread, files edited, and a condensed
 transcript. Cost is Claude Code's own record for the session, split across threads by
 token usage.
@@ -87,8 +87,8 @@ use `py -3` instead of `python3`.
   agent view: `✽ working`, `✻ running`, `∙ exited`, `! crashed`, `∙ closed`; `list --table`
   groups rows under Working, Running, Needs attention and Closed (`--group-by dir` for
   directories, `--group-by none` for one flat table).
-- `summarize`: one session told back as a colleague would, in five fixed sections (what
-  happened, where it stands, your next steps, cost, plus the header), brief or full, on
+- `summarize`: one session told back as a colleague would, in four fixed sections (the
+  header, what happened, where it stands, cost), brief or full, on
   screen or as a markdown file (or both). Asks depth and destination when the request
   leaves them open, warns first when a session spans several days and mixes topics, and
   only writes where you say. Shows the session's recorded cost and an estimated split per
