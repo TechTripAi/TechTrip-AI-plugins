@@ -6,23 +6,27 @@
     "url": "https://github.com/TechTripAi"
   },
   "metadata": {
-    "description": "Everything TechTrip AI releases for Claude Code and other agent harnesses, in one catalog: small Claude Code tools hosted here, plus larger products (second brain, Obsidian knowledge companion) that live in their own repositories. Add the marketplace once and install what you need.",
-    "version": "0.4.0"
+    "description": "Everything TechTrip AI releases for Claude Code and other agent harnesses, in one catalog. Add the marketplace once and install what you need. No plugin code lives here; every entry points at its own repository.",
+    "version": "1.0.0"
   },
   "plugins": [
     {
       "name": "claude-sessions",
-      "source": "./plugins/claude-sessions",
+      "source": {
+        "source": "git-subdir",
+        "url": "TechTripAi/techtrip-claude-plugins",
+        "path": "plugins/claude-sessions"
+      },
       "description": "Find, list, resume and summarize past Claude Code sessions across every project on this machine or just the current directory: directory, session id, status, last active, the last thing you said, the exact resume command, and a brief or full summary on screen or as markdown that tells you what happened, where it stands and what it cost. Includes a brain-dump tour.",
       "version": "0.5.0",
-      "category": "productivity",
+      "category": "claude-code",
       "author": {
         "name": "Terry Trippany (Try AI Solutions)",
         "email": "terry.trippany@techtrip.ai",
         "url": "https://github.com/TechTripAi"
       },
-      "homepage": "https://github.com/TechTripAi/TechTrip-AI-plugins/tree/main/plugins/claude-sessions",
-      "repository": "https://github.com/TechTripAi/TechTrip-AI-plugins",
+      "homepage": "https://github.com/TechTripAi/techtrip-claude-plugins/tree/main/plugins/claude-sessions",
+      "repository": "https://github.com/TechTripAi/techtrip-claude-plugins",
       "license": "FSL-1.1-MIT",
       "keywords": [
         "claude-code",
