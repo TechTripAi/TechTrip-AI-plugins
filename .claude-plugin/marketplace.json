@@ -44,7 +44,7 @@
         "repo": "TechTripAi/techtrip-secondbrain"
       },
       "description": "One-command bootstrapper for a generic LLM Wiki second brain on a fresh Mac: installs Obsidian and its community plugins, pulls the TechTrip-maintained claude-obsidian fork, scaffolds a clean vault, wires the Obsidian MCP server, ships the yt-fetch, x-fetch, voice-fetch, code-fetch and notebooklm-ingest source skills plus the new-idea origination scaffolder, and sets up git sync and backup. Harness-agnostic skills with Claude Code, Cursor and Copilot harness templates. Interactive and idempotent. Lives in its own repository; this catalog is its only marketplace.",
-      "version": "0.2.21",
+      "version": "0.2.22",
       "category": "knowledge",
       "author": {
         "name": "Terry Trippany (Try AI Solutions)",
@@ -71,7 +71,7 @@
         "repo": "TechTripAi/claude-obsidian"
       },
       "description": "TechTrip AI's maintained fork of AgriciDaniel's MIT-licensed claude-obsidian, a self-organizing AI second brain for Obsidian + Claude Code built on Karpathy's LLM Wiki pattern. The fork is maintained independently and carries fixes and changes that are not merged upstream; the original author's credit and MIT license are retained. Installed automatically by techtrip-secondbrain; install from here to use it on its own. This catalog is its only marketplace.",
-      "version": "1.9.6",
+      "version": "1.9.7",
       "category": "knowledge",
       "author": {
         "name": "AgriciDaniel (original); maintained by Terry Trippany, TechTrip AI",
