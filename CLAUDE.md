@@ -10,7 +10,7 @@ the license, the README art. **It is a catalog only. Never add plugin code here.
 points at the repository where that plugin lives, and the same file is read by Claude Code and
 GitHub Copilot CLI.
 
-Two kinds of entry, and the rule for choosing (catalog ADR-003, 2026-10-25):
+Two kinds of entry, and the rule for choosing (`docs/packaging.md`, section 2):
 
 - **`git-subdir` into a Claude-only domain repo.** Small tools that only make sense inside
   Claude Code live together in `TechTripAi/techtrip-claude-plugins` under `plugins/<name>/`;
@@ -25,6 +25,14 @@ Every entry carries `category` (the domain: `claude-code`, `knowledge`, `enginee
 
 There is no build, no package manager, no test runner and no linter.
 
+## Packaging specification
+
+`docs/packaging.md` is the one specification for how every TechTrip plugin is packaged, named,
+presented, installed and released. Every other
+repository links to it and does not restate it. When a rule changes, change it there first,
+then the short summary in `README.md`. `docs/` holds documentation only; the rule against
+plugin code in this repository stands.
+
 ## Commands
 
 ```bash
@@ -35,7 +43,7 @@ bash scripts/check.sh                                  # fields, live version co
 
 `claude plugin validate` currently reports the names `claude-sessions` and `claude-obsidian`
 as reserved third-party names (Claude Code 2.1.3xx). That finding is known and accepted for
-now (ADR-006 in the reorganisation story); `check.sh` reports it as a warning and fails on
+now (decided 2026-10-25); `check.sh` reports it as a warning and fails on
 anything else.
 
 ## Releasing

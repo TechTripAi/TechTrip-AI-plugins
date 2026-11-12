@@ -71,6 +71,9 @@ which the Agent Plugins specification forbids.
 - A published name never changes. Labels change through `displayName`; an unavoidable rename
   goes through this catalog's `renames` map so existing installs migrate.
 
+The full specification, with worked examples and the decisions behind it, is
+[docs/packaging.md](docs/packaging.md).
+
 ## Other harnesses
 
 - **GitHub Copilot CLI** reads this same file:
