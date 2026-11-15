@@ -79,7 +79,7 @@ Further rules:
   | Plugin | Tour skill |
   |---|---|
   | `techtrip-secondbrain` | `brain-dump` |
-  | `claude-sessions` | `brain-dump` for now; it takes a name of its own at its next release |
+  | `claude-sessions` | `sessions-briefing` |
 - **Anything new is lowercase kebab-case.** `TechTrip-AI-plugins` keeps its capitals because
   renaming a marketplace breaks every install.
 

@@ -18,7 +18,7 @@ Inside Claude Code:
 ```
 /plugin marketplace add TechTripAi/TechTrip-AI-plugins
 /plugin install claude-sessions@TechTrip-AI-plugins
-/claude-sessions:brain-dump
+/claude-sessions:sessions-briefing
 ```
 
 The first line registers the marketplace on your machine. The second installs one plugin at
@@ -28,7 +28,7 @@ user scope, so it is available in every project. The third starts its tour.
 
 | Plugin | What it does | Lives in | Start here |
 |---|---|---|---|
-| claude-sessions | Find, list, resume and summarize past Claude Code sessions across every project on this machine or just the current directory: directory, session id, status, last active, the last thing you said, and the exact resume command; plus a brief or full summary of any session, on screen or as a markdown file, that tells you what happened, where it stands and what it cost. Flags sessions still running elsewhere so you do not fork them by accident. | [techtrip-claude-plugins](https://github.com/TechTripAi/techtrip-claude-plugins) | `/claude-sessions:brain-dump` |
+| claude-sessions | Find, list, resume and summarize past Claude Code sessions across every project on this machine or just the current directory: directory, session id, status, last active, the last thing you said, and the exact resume command; plus a brief or full summary of any session, on screen or as a markdown file, that tells you what happened, where it stands and what it cost. Flags sessions still running elsewhere so you do not fork them by accident. | [techtrip-claude-plugins](https://github.com/TechTripAi/techtrip-claude-plugins) | `/claude-sessions:sessions-briefing` |
 | techtrip-secondbrain | One-command bootstrapper for a generic LLM Wiki second brain on a fresh Mac: Obsidian, the claude-obsidian companion, a clean vault, the Obsidian MCP server, source-fetch skills (YouTube, X, voice, code, NotebookLM), git sync and backup. Harness-agnostic skills with Claude Code, Cursor and Copilot templates. | [techtrip-secondbrain](https://github.com/TechTripAi/techtrip-secondbrain) | `/techtrip-secondbrain:brain-dump` |
 | claude-obsidian | TechTrip AI's maintained fork of [AgriciDaniel's claude-obsidian](https://github.com/AgriciDaniel/claude-obsidian) (MIT), a self-organizing AI second brain for Obsidian + Claude Code. Maintained independently; original credit and license retained. Installed for you by techtrip-secondbrain, or on its own from here. | [claude-obsidian](https://github.com/TechTripAi/claude-obsidian) | its README |
 
