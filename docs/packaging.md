@@ -53,7 +53,7 @@ folder and the health check. It never holds plugin code.
 | Fork | Keeps the upstream name. | `claude-obsidian` |
 | Claude-only tool | Named for what it does. | `claude-sessions` |
 | Skill | Lowercase kebab-case. Related skills in one plugin share a prefix. | `study-partner`, `study-quiz` |
-| Tour skill | Named by the plugin, in its domain's own word for getting oriented, and carrying the plugin's skill prefix. No two plugins use the same name. | `brain-dump`, `study-orientation` |
+| Tour skill | Named by the plugin, in its domain's own word for getting oriented, and carrying the plugin's skill prefix. No two plugins use the same name. | `brain-dump` in `techtrip-secondbrain` |
 | Health-check skill, where a plugin has one | `<domain>-doctor`. | `secondbrain-doctor` |
 | Catalog `category` | The domain, one word or kebab-case. | `claude-code`, `knowledge`, `engineering`, `education`, `business` |
 
@@ -79,7 +79,6 @@ Further rules:
   | Plugin | Tour skill |
   |---|---|
   | `techtrip-secondbrain` | `brain-dump` |
-  | `techtrip-education` | `study-orientation` |
   | `claude-sessions` | `brain-dump` for now; it takes a name of its own at its next release |
 - **Anything new is lowercase kebab-case.** `TechTrip-AI-plugins` keeps its capitals because
   renaming a marketplace breaks every install.
@@ -193,7 +192,7 @@ A study partner is useful outside Claude Code, so it is a product in its own rep
 - **Repository and plugin:** `TechTripAi/techtrip-education`, one plugin at the repository
   root.
 - **Skill:** `study-partner`, flat under `skills/`. Later skills share the prefix, for
-  example `study-quiz` and `study-plan`. The tour is `study-orientation`.
+  example `study-quiz` and `study-plan`, plus a tour skill.
 - **Catalog entry:** a `github` source pointing at the repository, with `category` set to
   `education`.
 
@@ -209,7 +208,7 @@ A study partner is useful outside Claude Code, so it is a product in its own rep
 
 - **Discovery:** the catalog's "What is in the catalog" table, and `/plugin` in Claude Code.
 - **Install in Claude Code:** `/plugin install techtrip-education@TechTrip-AI-plugins`,
-  then `/techtrip-education:study-orientation` for the tour.
+  then its tour skill.
 - **Install elsewhere:** Copilot CLI installs it from the same catalog. Cursor and Codex
   take it with `npx skills add TechTripAi/techtrip-education`.
 
