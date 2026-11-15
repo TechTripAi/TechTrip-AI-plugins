@@ -7,9 +7,9 @@
 **Everything TechTrip AI releases, in one catalog.** Add this marketplace once and install what
 you need. Nothing is hosted in this repository: it is the index, and every entry points at the
 repository where that plugin lives. The same file serves Claude Code and GitHub Copilot CLI.
-Every TechTrip plugin ships a `brain-dump` skill: a menu-driven tour that teaches you how to
-use it and hands you the exact prompts to type, so "how did this work again?" three weeks from
-now is never a search.
+Every TechTrip plugin ships a tour skill: a menu-driven tour that teaches you how to use it
+and hands you the exact prompts to type, so "how did this work again?" three weeks from now is
+never a search. Each plugin names its own; the "Start here" column below gives it.
 
 ## Quick start
 

@@ -1,7 +1,7 @@
 # Packaging, naming and shipping TechTrip plugins
 
 **Status:** in force
-**Last updated:** 2026-11-12
+**Last updated:** 2026-11-15
 **Owner:** Terry Trippany (Try AI Solutions)
 
 This is the one specification for how a TechTrip AI plugin is packaged, named, presented,
@@ -23,7 +23,8 @@ links to this page. When a rule changes, it changes here first.
    hold several small plugins in one repository. A domain that serves other harnesses too is
    one plugin at the repository root, with many skills.
 4. **Names go by type and never change after publication.**
-5. **Skills are flat and share a prefix.** Every plugin also ships a `brain-dump` skill.
+5. **Skills are flat and share a prefix.** Every plugin also ships a tour skill, under a
+   name of its own.
 6. **Unreleased work is private and unlisted, under its final name.** It gets a catalog
    entry when it is ready to ship, and not before.
 7. **`plugin.json` is the version of record.** The catalog entry mirrors it.
@@ -52,7 +53,7 @@ folder and the health check. It never holds plugin code.
 | Fork | Keeps the upstream name. | `claude-obsidian` |
 | Claude-only tool | Named for what it does. | `claude-sessions` |
 | Skill | Lowercase kebab-case. Related skills in one plugin share a prefix. | `study-partner`, `study-quiz` |
-| Tour skill | Always `brain-dump`, never prefixed. The plugin namespace keeps them apart. | `/techtrip-education:brain-dump` |
+| Tour skill | Named by the plugin, in its domain's own word for getting oriented, and carrying the plugin's skill prefix. No two plugins use the same name. | `brain-dump`, `study-orientation` |
 | Health-check skill, where a plugin has one | `<domain>-doctor`. | `secondbrain-doctor` |
 | Catalog `category` | The domain, one word or kebab-case. | `claude-code`, `knowledge`, `engineering`, `education`, `business` |
 
@@ -69,6 +70,17 @@ Further rules:
   append-only `renames` map so existing installs migrate.
 - **Skills are never grouped into subfolders.** They stay flat under `skills/`; the Agent
   Plugins specification forbids nesting. The shared prefix does the grouping.
+- **A tour skill's name is unique across the catalog.** A skill's name is its folder name,
+  and a harness that keeps every skill in one folder has no plugin namespace to tell two
+  apart, so two plugins with a tour of the same name could not be installed side by side.
+  The same holds for every skill of a cross-harness plugin, which is what the shared
+  prefix is for.
+
+  | Plugin | Tour skill |
+  |---|---|
+  | `techtrip-secondbrain` | `brain-dump` |
+  | `techtrip-education` | `study-orientation` |
+  | `claude-sessions` | `brain-dump` for now; it takes a name of its own at its next release |
 - **Anything new is lowercase kebab-case.** `TechTrip-AI-plugins` keeps its capitals because
   renaming a marketplace breaks every install.
 
@@ -99,7 +111,7 @@ Further rules:
 ### Shipping it
 
 1. The repository's own health check is green.
-2. The README, CHANGELOG, license file and `brain-dump` skill are in place (section 5).
+2. The README, CHANGELOG, license file and tour skill are in place (section 5).
 3. The repository is made public.
 4. One entry is added to this catalog's `marketplace.json`, with `name`, `source`,
    `description`, `category` and `version`. The catalog's `metadata.version` is bumped
@@ -141,13 +153,15 @@ bump does not reach anyone.
   ```
   /plugin marketplace add TechTripAi/TechTrip-AI-plugins
   /plugin install <name>@TechTrip-AI-plugins
-  /<name>:brain-dump
+  /<name>:<tour skill>
   ```
 
 ### Skills
 
-- Every plugin ships `brain-dump`: a menu-driven tour that teaches, hands the user the exact
-  prompts to type, and never runs anything itself.
+- Every plugin ships a tour skill (section 3): a menu-driven tour that teaches, hands the
+  user the exact prompts to type, and never runs anything itself. Its `description` carries
+  the word "tour" and the phrase "how do I use", so a user reaches it in plain words
+  ("give me the study tour") without knowing its name.
 - A worker skill's `description` carries the plain-language phrases a user would say, so the
   agent reaches for the skill without a slash command. It stays within 1024 characters so
   Copilot CLI does not skip it.
@@ -179,7 +193,7 @@ A study partner is useful outside Claude Code, so it is a product in its own rep
 - **Repository and plugin:** `TechTripAi/techtrip-education`, one plugin at the repository
   root.
 - **Skill:** `study-partner`, flat under `skills/`. Later skills share the prefix, for
-  example `study-quiz` and `study-plan`, plus `brain-dump`.
+  example `study-quiz` and `study-plan`. The tour is `study-orientation`.
 - **Catalog entry:** a `github` source pointing at the repository, with `category` set to
   `education`.
 
@@ -195,7 +209,7 @@ A study partner is useful outside Claude Code, so it is a product in its own rep
 
 - **Discovery:** the catalog's "What is in the catalog" table, and `/plugin` in Claude Code.
 - **Install in Claude Code:** `/plugin install techtrip-education@TechTrip-AI-plugins`,
-  then `/techtrip-education:brain-dump` for the tour.
+  then `/techtrip-education:study-orientation` for the tour.
 - **Install elsewhere:** Copilot CLI installs it from the same catalog. Cursor and Codex
   take it with `npx skills add TechTripAi/techtrip-education`.
 
@@ -207,11 +221,11 @@ The same pattern, one plugin for the whole domain.
   root. Private and unlisted until it is ready to ship.
 - **Skills:** flat under `skills/`. The story workflow `story-setup`, `story-plan` and
   `story-implement` share the `story-` prefix; further engineering skills join them over
-  time, plus `brain-dump`.
+  time, plus a tour skill.
 - **Catalog entry, when it ships:** a `github` source, with `category` set to `engineering`.
 - **Install in Claude Code, when it ships:**
   `/plugin install techtrip-engineering@TechTrip-AI-plugins`, then
-  `/techtrip-engineering:brain-dump`.
+  its tour skill.
 
 ### A Claude-only tool: claude-sessions (shipped)
 
