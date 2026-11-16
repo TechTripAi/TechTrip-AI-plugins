@@ -181,7 +181,11 @@ copyable values. The full list is in the `techtrip-claude-plugins` README.
 | GitHub Copilot CLI | The same catalog file | `copilot plugin marketplace add TechTripAi/TechTrip-AI-plugins`, then `copilot plugin install <name>@TechTrip-AI-plugins`. Root-level plugins only. |
 | Cursor, Codex, Gemini CLI and anything that reads `SKILL.md` | The plugin's repository | `npx skills add TechTripAi/<repo> -g`. It asks which tools to install for; without `-g` it installs into the current project. `npx skills update -g` picks up releases. |
 
-A README gives this one command as the route for other tools. Linking skill folders from a
+A README gives this one command as the route for other tools, followed by the
+single-tool options: `-a <tool>` on the same command, and for Gemini CLI its own
+`gemini skills install https://github.com/TechTripAi/<repo>.git --path skills`, which
+installs into `~/.gemini/skills`. With `-g`, `npx skills add` writes to the shared
+`~/.agents/skills` whichever tool is named. Linking skill folders from a
 clone is for development only and belongs in the README's developing section.
 
 Gemini CLI uses its own authentication, which no TechTrip plugin configures. A plugin's
