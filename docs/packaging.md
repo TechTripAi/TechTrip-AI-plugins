@@ -80,6 +80,7 @@ Further rules:
   |---|---|
   | `techtrip-secondbrain` | `brain-dump` |
   | `claude-sessions` | `sessions-briefing` |
+  | `techtrip-education` | `study-orientation` |
 - **Anything new is lowercase kebab-case.** `TechTrip-AI-plugins` keeps its capitals because
   renaming a marketplace breaks every install.
 
@@ -179,20 +180,26 @@ copyable values. The full list is in the `techtrip-claude-plugins` README.
 | Claude Code | `/plugin`, under TechTrip-AI-plugins; the catalog README table | `/plugin marketplace add TechTripAi/TechTrip-AI-plugins`, then `/plugin install <name>@TechTrip-AI-plugins` |
 | GitHub Copilot CLI | The same catalog file | `copilot plugin marketplace add TechTripAi/TechTrip-AI-plugins`, then `copilot plugin install <name>@TechTrip-AI-plugins`. Root-level plugins only. |
 | Cursor, Codex and anything that reads `SKILL.md` | The plugin's repository | `npx skills add TechTripAi/<repo>` |
+| Gemini CLI | The plugin's repository | Clone the repository, then `gemini skills link <clone>/skills`. It links every skill folder and picks up later edits. Tried with Gemini CLI 0.68.0 and `techtrip-education` on 2026-11-16. |
+
+Gemini CLI needs its own sign-in, which no TechTrip plugin sets up. In that test a personal
+Google account could not sign in to the CLI and a free-tier API key ran out before one
+planning run finished; an API key with billing or credit worked. Google changes these
+terms, so a plugin's README points to Google's instructions and does not restate them.
 
 Inside a session, a skill is found by its description: the user asks in plain words and the
 agent picks the skill. That is why the description rule in section 5 matters.
 
 ## 7. Worked examples
 
-### A cross-harness domain: education (planned)
+### A cross-harness domain: education (shipped)
 
 A study partner is useful outside Claude Code, so it is a product in its own repository.
 
 - **Repository and plugin:** `TechTripAi/techtrip-education`, one plugin at the repository
   root.
-- **Skill:** `study-partner`, flat under `skills/`. Later skills share the prefix, for
-  example `study-quiz` and `study-plan`, plus a tour skill.
+- **Skills:** `study-partner`, flat under `skills/`, plus the tour, `study-orientation`.
+  Later skills share the `study-` prefix.
 - **Catalog entry:** a `github` source pointing at the repository, with `category` set to
   `education`.
 
@@ -200,17 +207,18 @@ A study partner is useful outside Claude Code, so it is a product in its own rep
   {
     "name": "techtrip-education",
     "source": { "source": "github", "repo": "TechTripAi/techtrip-education" },
-    "description": "A study partner that quizzes you, tracks what you have covered and picks up where you left off.",
-    "version": "0.1.0",
+    "description": "A study partner for certifications, training and any topic you want to learn. ...",
+    "version": "0.2.0",
     "category": "education"
   }
   ```
 
 - **Discovery:** the catalog's "What is in the catalog" table, and `/plugin` in Claude Code.
 - **Install in Claude Code:** `/plugin install techtrip-education@TechTrip-AI-plugins`,
-  then its tour skill.
+  then `/techtrip-education:study-orientation`.
 - **Install elsewhere:** Copilot CLI installs it from the same catalog. Cursor and Codex
-  take it with `npx skills add TechTripAi/techtrip-education`.
+  take it with `npx skills add TechTripAi/techtrip-education`. Gemini CLI links the skill
+  folders from a clone (section 6).
 
 ### A cross-harness domain: engineering (in development)
 

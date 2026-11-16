@@ -31,17 +31,19 @@ user scope, so it is available in every project. The third starts its tour.
 | claude-sessions | Find, list, resume and summarize past Claude Code sessions across every project on this machine or just the current directory: directory, session id, status, last active, the last thing you said, and the exact resume command; plus a brief or full summary of any session, on screen or as a markdown file, that tells you what happened, where it stands and what it cost. Flags sessions still running elsewhere so you do not fork them by accident. | [techtrip-claude-plugins](https://github.com/TechTripAi/techtrip-claude-plugins) | `/claude-sessions:sessions-briefing` |
 | techtrip-secondbrain | One-command bootstrapper for a generic LLM Wiki second brain on a fresh Mac: Obsidian, the claude-obsidian companion, a clean vault, the Obsidian MCP server, source-fetch skills (YouTube, X, voice, code, NotebookLM), git sync and backup. Harness-agnostic skills with Claude Code, Cursor and Copilot templates. | [techtrip-secondbrain](https://github.com/TechTripAi/techtrip-secondbrain) | `/techtrip-secondbrain:brain-dump` |
 | claude-obsidian | TechTrip AI's maintained fork of [AgriciDaniel's claude-obsidian](https://github.com/AgriciDaniel/claude-obsidian) (MIT), a self-organizing AI second brain for Obsidian + Claude Code. Maintained independently; original credit and license retained. Installed for you by techtrip-secondbrain, or on its own from here. | [claude-obsidian](https://github.com/TechTripAi/claude-obsidian) | its README |
+| techtrip-education | A study partner for certifications, training and any topic you want to learn. It plans first (your mission, sources you approve, a phased study plan), then teaches, works through steps with you and quizzes you. Each subject keeps its place as plain files, so you pick up where you left off from any session or AI tool, and you can export a Markdown packet of your lessons at any time. | [techtrip-education](https://github.com/TechTripAi/techtrip-education) | `/techtrip-education:study-orientation` |
 
 Install any of them the same way:
 
 ```
 /plugin install techtrip-secondbrain@TechTrip-AI-plugins
 /plugin install claude-obsidian@TechTrip-AI-plugins
+/plugin install techtrip-education@TechTrip-AI-plugins
 ```
 
 This catalog is the only marketplace for all of them; the plugins' own repositories carry no
 public marketplace of their own. More will land here as they are built, including packs for
-engineering, education and business.
+engineering and business.
 
 ## How TechTrip AI repositories are organized
 
@@ -51,6 +53,7 @@ TechTripAi/
 ├── techtrip-claude-plugins    Claude Code–only tools, several plugins under plugins/<name>/
 │   └── plugins/claude-sessions
 ├── techtrip-secondbrain       a product: one plugin at the repository root
+├── techtrip-education         a product: one plugin at the repository root
 └── claude-obsidian            a maintained fork: one plugin at the repository root
 ```
 
