@@ -179,8 +179,10 @@ copyable values. The full list is in the `techtrip-claude-plugins` README.
 |---|---|---|
 | Claude Code | `/plugin`, under TechTrip-AI-plugins; the catalog README table | `/plugin marketplace add TechTripAi/TechTrip-AI-plugins`, then `/plugin install <name>@TechTrip-AI-plugins` |
 | GitHub Copilot CLI | The same catalog file | `copilot plugin marketplace add TechTripAi/TechTrip-AI-plugins`, then `copilot plugin install <name>@TechTrip-AI-plugins`. Root-level plugins only. |
-| Cursor, Codex and anything that reads `SKILL.md` | The plugin's repository | `npx skills add TechTripAi/<repo>` |
-| Gemini CLI | The plugin's repository | Clone the repository, then `gemini skills link <clone>/skills`. It links every skill folder and picks up later changes. Requires Gemini CLI 0.68.0 or later. |
+| Cursor, Codex, Gemini CLI and anything that reads `SKILL.md` | The plugin's repository | `npx skills add TechTripAi/<repo> -g`. It asks which tools to install for; without `-g` it installs into the current project. `npx skills update -g` picks up releases. |
+
+A README gives this one command as the route for other tools. Linking skill folders from a
+clone is for development only and belongs in the README's developing section.
 
 Gemini CLI uses its own authentication, which no TechTrip plugin configures. A plugin's
 README tells the user to set up a Gemini API key on a project with billing enabled and
@@ -215,9 +217,8 @@ A study partner is useful outside Claude Code, so it is a product in its own rep
 - **Discovery:** the catalog's "What is in the catalog" table, and `/plugin` in Claude Code.
 - **Install in Claude Code:** `/plugin install techtrip-education@TechTrip-AI-plugins`,
   then `/techtrip-education:study-orientation`.
-- **Install elsewhere:** Copilot CLI installs it from the same catalog. Cursor and Codex
-  take it with `npx skills add TechTripAi/techtrip-education`. Gemini CLI links the skill
-  folders from a clone (section 6).
+- **Install elsewhere:** Copilot CLI installs it from the same catalog. Cursor, Codex
+  and Gemini CLI take it with `npx skills add TechTripAi/techtrip-education -g`.
 
 ### A cross-harness domain: engineering (in development)
 

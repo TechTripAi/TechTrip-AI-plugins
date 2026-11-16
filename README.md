@@ -83,7 +83,7 @@ The full specification, with worked examples and the decisions behind it, is
   `copilot plugin marketplace add TechTripAi/TechTrip-AI-plugins`, then
   `copilot plugin install techtrip-secondbrain@TechTrip-AI-plugins`. Entries that point into
   a subdirectory (the Claude-only tools) are not installable from Copilot, by design.
-- **Anything that reads `SKILL.md`** (Cursor, Codex, and the rest, via [skills.sh](https://skills.sh))
+- **Anything that reads `SKILL.md`** (Cursor, Codex, Gemini CLI and the rest, via [skills.sh](https://skills.sh))
   can take the skills of any plugin repository directly:
   `npx skills add TechTripAi/techtrip-secondbrain`.
 
