@@ -180,12 +180,11 @@ copyable values. The full list is in the `techtrip-claude-plugins` README.
 | Claude Code | `/plugin`, under TechTrip-AI-plugins; the catalog README table | `/plugin marketplace add TechTripAi/TechTrip-AI-plugins`, then `/plugin install <name>@TechTrip-AI-plugins` |
 | GitHub Copilot CLI | The same catalog file | `copilot plugin marketplace add TechTripAi/TechTrip-AI-plugins`, then `copilot plugin install <name>@TechTrip-AI-plugins`. Root-level plugins only. |
 | Cursor, Codex and anything that reads `SKILL.md` | The plugin's repository | `npx skills add TechTripAi/<repo>` |
-| Gemini CLI | The plugin's repository | Clone the repository, then `gemini skills link <clone>/skills`. It links every skill folder and picks up later edits. Tried with Gemini CLI 0.68.0 and `techtrip-education` on 2026-11-16. |
+| Gemini CLI | The plugin's repository | Clone the repository, then `gemini skills link <clone>/skills`. It links every skill folder and picks up later changes. Requires Gemini CLI 0.68.0 or later. |
 
-Gemini CLI needs its own sign-in, which no TechTrip plugin sets up. In that test a personal
-Google account could not sign in to the CLI and a free-tier API key ran out before one
-planning run finished; an API key with billing or credit worked. Google changes these
-terms, so a plugin's README points to Google's instructions and does not restate them.
+Gemini CLI uses its own authentication, which no TechTrip plugin configures. A plugin's
+README tells the user to set up a Gemini API key on a project with billing enabled and
+links to Google's instructions without restating them.
 
 Inside a session, a skill is found by its description: the user asks in plain words and the
 agent picks the skill. That is why the description rule in section 5 matters.
