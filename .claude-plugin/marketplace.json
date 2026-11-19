@@ -95,7 +95,7 @@
         "repo": "TechTripAi/techtrip-education"
       },
       "description": "A study partner for certifications, training and any topic you want to learn. It plans first: a mission, authoritative sources and a phased study plan. Then it teaches, works through steps with you, quizzes in easy, hard or expert mode, and builds a Markdown packet of lessons you can export at any time. Each subject keeps its own long-lived state as plain files, so you pick up where you left off from any session or AI tool. Includes a guided tour, study-orientation.",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "category": "education",
       "author": {
         "name": "Terry Trippany (Try AI Solutions)",
