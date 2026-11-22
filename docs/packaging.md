@@ -1,7 +1,7 @@
 # Packaging, naming and shipping TechTrip plugins
 
 **Status:** in force
-**Last updated:** 2026-11-15
+**Last updated:** 2026-11-22
 **Owner:** Terry Trippany (Try AI Solutions)
 
 This is the one specification for how a TechTrip AI plugin is packaged, named, presented,
@@ -23,8 +23,8 @@ links to this page. When a rule changes, it changes here first.
    hold several small plugins in one repository. A domain that serves other harnesses too is
    one plugin at the repository root, with many skills.
 4. **Names go by type and never change after publication.**
-5. **Skills are flat and share a prefix.** Every plugin also ships a tour skill, under a
-   name of its own.
+5. **Skills are flat, and each name stands on its own.** Related skills share a prefix
+   where one fits. Every plugin also ships a tour skill, under a name of its own.
 6. **Unreleased work is private and unlisted, under its final name.** It gets a catalog
    entry when it is ready to ship, and not before.
 7. **`plugin.json` is the version of record.** The catalog entry mirrors it.
@@ -52,8 +52,8 @@ folder and the health check. It never holds plugin code.
 | Product plugin and its repository | `techtrip-<domain>`. Repository name, catalog entry name and manifest name are the same string. | `techtrip-secondbrain`, `techtrip-education` |
 | Fork | Keeps the upstream name. | `claude-obsidian` |
 | Claude-only tool | Named for what it does. | `claude-sessions` |
-| Skill | Lowercase kebab-case. Related skills in one plugin share a prefix. | `study-partner`, `study-quiz` |
-| Tour skill | Named by the plugin, in its domain's own word for getting oriented, and carrying the plugin's skill prefix. No two plugins use the same name. | `brain-dump` in `techtrip-secondbrain` |
+| Skill | Lowercase kebab-case. Related skills in one plugin share a prefix, or each carries a domain word that makes it clear and distinctive standing alone. | `study-partner`, `study-quiz`; `image-transform-tools` |
+| Tour skill | Named by the plugin, in its domain's own word for getting oriented. It carries the plugin's skill prefix where the plugin has one. No two plugins use the same name. | `brain-dump` in `techtrip-secondbrain` |
 | Health-check skill, where a plugin has one | `<domain>-doctor`. | `secondbrain-doctor` |
 | Catalog `category` | The domain, one word or kebab-case. | `claude-code`, `knowledge`, `engineering`, `education`, `photography`, `business` |
 
@@ -69,12 +69,19 @@ Further rules:
   Labels change through `displayName`. An unavoidable rename goes through the catalog's
   append-only `renames` map so existing installs migrate.
 - **Skills are never grouped into subfolders.** They stay flat under `skills/`; the Agent
-  Plugins specification forbids nesting. The shared prefix does the grouping.
+  Plugins specification forbids nesting. A shared prefix does the grouping.
+- **A skill's name has to work with no plugin name in front of it.** Claude Code and
+  Copilot CLI show `techtrip-photography:photo-expert`; Cursor, Codex, Gemini CLI and
+  other tools that read a skills folder show only `photo-expert`, beside every other
+  installed skill. A shared prefix is the usual way to keep a plugin's skills together and
+  distinctive there (`study-partner`, `study-orientation`). Where no single prefix fits the
+  skills, each name carries a domain word of its own instead (`image-transform-tools`,
+  `photo-expert`), and a bare generic name such as `transform-tools` is never used.
 - **A tour skill's name is unique across the catalog.** A skill's name is its folder name,
   and a harness that keeps every skill in one folder has no plugin namespace to tell two
   apart, so two plugins with a tour of the same name could not be installed side by side.
-  The same holds for every skill of a cross-harness plugin, which is what the shared
-  prefix is for.
+  The same holds for every skill of a cross-harness plugin, which is what the prefix or
+  the domain word is for.
 
   | Plugin | Tour skill |
   |---|---|
