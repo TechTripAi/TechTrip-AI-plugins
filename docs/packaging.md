@@ -55,7 +55,7 @@ folder and the health check. It never holds plugin code.
 | Skill | Lowercase kebab-case. Related skills in one plugin share a prefix. | `study-partner`, `study-quiz` |
 | Tour skill | Named by the plugin, in its domain's own word for getting oriented, and carrying the plugin's skill prefix. No two plugins use the same name. | `brain-dump` in `techtrip-secondbrain` |
 | Health-check skill, where a plugin has one | `<domain>-doctor`. | `secondbrain-doctor` |
-| Catalog `category` | The domain, one word or kebab-case. | `claude-code`, `knowledge`, `engineering`, `education`, `business` |
+| Catalog `category` | The domain, one word or kebab-case. | `claude-code`, `knowledge`, `engineering`, `education`, `photography`, `business` |
 
 Further rules:
 
@@ -81,6 +81,7 @@ Further rules:
   | `techtrip-secondbrain` | `brain-dump` |
   | `claude-sessions` | `sessions-briefing` |
   | `techtrip-education` | `study-orientation` |
+  | `techtrip-photography` | `photo-expert` |
 - **Anything new is lowercase kebab-case.** `TechTrip-AI-plugins` keeps its capitals because
   renaming a marketplace breaks every install.
 
