@@ -64,8 +64,9 @@ One repository per domain. A domain that only makes sense inside Claude Code may
 small plugins in one repository; the catalog points at each with a `git-subdir` entry. A domain
 that serves other harnesses too is one plugin at its repository root, with many skills, because
 Copilot CLI reads this same catalog but cannot point into a subdirectory. Related skills inside
-a plugin stay flat under `skills/` and share a name prefix; they are never grouped by folder,
-which the Agent Plugins specification forbids.
+a plugin stay flat under `skills/` and share a name prefix, or each carries a domain word
+that makes it clear standing alone; they are never grouped by folder, which the Agent
+Plugins specification forbids.
 
 ### Naming
 
